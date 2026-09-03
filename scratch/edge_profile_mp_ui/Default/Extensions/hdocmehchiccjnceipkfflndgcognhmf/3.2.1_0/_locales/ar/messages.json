@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "تعطيل شريط الأدوات"
+   },
+   "cinema_mode": {
+      "message": "وضع المسرح"
+   },
+   "create_screenshot": {
+      "message": "إنشاء لقطة شاشة"
+   },
+   "float_video": {
+      "message": "تعويم الفيديو"
+   },
+   "keyboard_shortcuts": {
+      "message": "اختصارات لوحة المفاتيح"
+   },
+   "loop_video": {
+      "message": "فيديو حلقة"
+   },
+   "msg_popup_1": {
+      "message": "هل تشاهد مقاطع الفيديو كثيرًا؟ سيساعدك امتدادنا في الحصول على تجربة أكثر إمتاعًا مع مقاطع فيديو youtube"
+   },
+   "msg_popup_2": {
+      "message": "يتيح لك امتداد البرنامج هذا:"
+   },
+   "msg_popup_3": {
+      "message": "يمكنك إزالة الإعلانات وزيادة حجم الفيديو إلى 600٪."
+   },
+   "msg_popup_4": {
+      "message": "قم بتشغيل الفيديو في الوضع العائم وانقل المشغل المصغر بحرية في أي مكان على سطح المكتب."
+   },
+   "msg_popup_5": {
+      "message": "قم بتشغيل الفيديو في الوضع العائم وانقل المشغل المصغر بحرية في أي مكان على سطح المكتب."
+   },
+   "remove_ads": {
+      "message": "ازالة الاعلانات"
+   }
+}

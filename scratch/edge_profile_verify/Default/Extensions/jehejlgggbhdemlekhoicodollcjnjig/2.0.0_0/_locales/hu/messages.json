@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "Engedélyezés minden oldalon"
+   },
+   "enableForCurrentSite": {
+      "message": "Engedélyezés az aktuális oldalon"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - Hatékony hirdetésblokkolás, magánélet védelmének javítása, biztonság fokozása, könnyű használat, gyorsabb betöltési sebesség, és hosszabb akkumulátor élettartam."
+   },
+   "extName": {
+      "message": "Ad Blocker"
+   }
+}

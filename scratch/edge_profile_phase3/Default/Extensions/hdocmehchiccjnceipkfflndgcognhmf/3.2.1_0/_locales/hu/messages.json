@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Eszköztár letiltása"
+   },
+   "cinema_mode": {
+      "message": "Színházi mód"
+   },
+   "create_screenshot": {
+      "message": "Képernyőkép létrehozása"
+   },
+   "float_video": {
+      "message": "Úszó videó"
+   },
+   "keyboard_shortcuts": {
+      "message": "Gyorsbillentyűket"
+   },
+   "loop_video": {
+      "message": "Hurok videó"
+   },
+   "msg_popup_1": {
+      "message": "Nézel gyakran videókat? Bővítményünk segítségével élvezetesebbé válhat a YouTube-videókkal"
+   },
+   "msg_popup_2": {
+      "message": "Ez a szoftverbővítés lehetővé teszi:"
+   },
+   "msg_popup_3": {
+      "message": "Távolíthatja el a hirdetéseket, és növelheti a videó hangerejét 600% -ra."
+   },
+   "msg_popup_4": {
+      "message": "játssza le a videót úszó módban, és szabadon mozgathatja a mini lejátszót bárhol az asztalon."
+   },
+   "msg_popup_5": {
+      "message": "játssza le a videót úszó módban, és szabadon mozgathatja a mini lejátszót bárhol az asztalon."
+   },
+   "remove_ads": {
+      "message": "Hirdetések eltávolítása"
+   }
+}

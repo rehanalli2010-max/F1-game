@@ -1,0 +1,80 @@
+{
+   "action": {
+      "default_icon": "/img/48.png",
+      "default_popup": "popup.html"
+   },
+   "background": {
+      "service_worker": "/js/bg-worker.js"
+   },
+   "commands": {
+      "cinema-mode": {
+         "description": "__MSG_cinema_mode__",
+         "suggested_key": {
+            "default": "Ctrl+Shift+Space",
+            "mac": "MacCtrl+Shift+Space"
+         }
+      },
+      "create-screenshot": {
+         "description": "__MSG_create_screenshot__",
+         "suggested_key": {
+            "default": "Alt+S"
+         }
+      },
+      "float-video": {
+         "description": "__MSG_float_video__",
+         "suggested_key": {
+            "default": "Ctrl+Space",
+            "mac": "MacCtrl+Space"
+         }
+      },
+      "remove-ads": {
+         "description": "__MSG_remove_ads__",
+         "suggested_key": {
+            "default": "Ctrl+Delete",
+            "mac": "MacCtrl+Delete"
+         }
+      }
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "js/common.js" ],
+      "matches": [ "*://*.youtube.com/*" ],
+      "run_at": "document_start"
+   }, {
+      "all_frames": true,
+      "css": [ "/css/skipstartads.css" ],
+      "js": [ "js/autoads.js", "js/skipstartads.js" ],
+      "matches": [ "*://*.youtube.com/*" ],
+      "run_at": "document_start"
+   }, {
+      "css": [ "/css/content.css", "/js/nouislider/nouislider.min.css" ],
+      "js": [ "/js/youtube-ui.js", "/js/content.js", "/js/nouislider/nouislider.min.js" ],
+      "matches": [ "*://youtube.com/*", "*://*.youtube.com/*" ],
+      "run_at": "document_end"
+   } ],
+   "default_locale": "en",
+   "description": "__MSG_AppDesc__",
+   "externally_connectable": {
+      "matches": [ "https://*.youtube.com/*", "https://youtube.com/*" ]
+   },
+   "homepage_url": "https://enhanced-videos.dllplayer.com/",
+   "host_permissions": [ "*://*.youtube.com/" ],
+   "icons": {
+      "128": "img/128.png",
+      "16": "img/16.png",
+      "256": "img/256.png",
+      "32": "img/32.png",
+      "48": "img/48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwGY2k8IjrfN4ILOt2IvYTsDIJ9rc4gtjN+1BY3DCDuN7XvqLQBS74EGl0e+wj1V7OtwvL4GugLRJXXO0NtOPS0W7deYgZTBPTaOUC1QUwZ3glKK44Xorq2PNz79TcDFTO0Y1U3zTEjg21/SQ+A5TFdjCPup1DA5AHOudTFIWVBt+l08TjmSTPiJMl0Pd1DgQpbQgZlSR63ydFhcDxfUZr39RHERXXWj6SfohKRfMIAQ7nCB8eRVKVqrYYy2Q/WCgzlIH2x59Nw7vqMZW1gyv9/5zH5itbbNwBLqjHELs+j7i/288/LhjrFjMRA6k4jV/SFiYFvaUwciJJesuF9HxuwIDAQAB",
+   "manifest_version": 3,
+   "name": "__MSG_AppName__",
+   "options_page": "options.html",
+   "permissions": [ "storage", "scripting" ],
+   "update_url": "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
+   "version": "3.2.1",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "css/content.css", "js/*", "html/*", "img/*", "options.html" ]
+   } ]
+}

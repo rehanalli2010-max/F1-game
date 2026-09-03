@@ -1,0 +1,1 @@
+!function(){const e=self.customFilters?.plainSelectors;e&&chrome.runtime.sendMessage({what:"removeCSS",css:`${e.join(",\n")}{display:none!important;}`}).catch((()=>{})),self.customProceduralFiltererAPI instanceof Object&&self.customProceduralFiltererAPI.reset(),self.customFilters=void 0}();

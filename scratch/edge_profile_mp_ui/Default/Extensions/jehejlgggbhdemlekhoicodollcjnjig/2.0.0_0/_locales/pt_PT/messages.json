@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "Ativar para todos os sites"
+   },
+   "enableForCurrentSite": {
+      "message": "Ativar para o site atual"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - Bloqueio de anúncios poderoso, aumento da privacidade, melhoria da segurança, fácil de usar, velocidades de carregamento mais rápidas e maior duração da bateria."
+   },
+   "extName": {
+      "message": "Bloqueador de anúncios"
+   }
+}

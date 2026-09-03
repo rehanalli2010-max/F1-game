@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "为所有网站启用"
+   },
+   "enableForCurrentSite": {
+      "message": "为当前网站启用"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - 强大的广告拦截功能，增强隐私保护，提升安全性，易于使用，加快加载速度，延长电池寿命。"
+   },
+   "extName": {
+      "message": "广告拦截器"
+   }
+}

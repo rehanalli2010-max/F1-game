@@ -1,0 +1,15 @@
+2026-09-03 15:23:55.416: [INFO] CurrentProfilePath: D:\CODE\F1 Game\scratch\edge_guest\Default
+2026-09-03 15:23:55.416: [INFO] Profiles total count: 1
+2026-09-03 15:23:55.416: [INFO] Profile: name=Personal path=D:\CODE\F1 Game\scratch\edge_guest\Default lastActive=2026-09-03T15:22:16.457Z
+2026-09-03 15:23:55.416: [INFO] LastUsedProfileDir: D:\CODE\F1 Game\scratch\edge_guest\Default
+2026-09-03 15:23:55.416: [INFO] MostRecentlyActiveProfile: name=Personal path=D:\CODE\F1 Game\scratch\edge_guest\Default lastActive=2026-09-03T15:22:16.457Z
+2026-09-03 15:23:55.416: [INFO] VisibilityChanged: 0
+2026-09-03 15:23:55.620: [INFO] OnDoneLoading sync enabled: 1
+2026-09-03 15:23:55.620: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-09-03 15:23:55.620: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-09-03 15:23:55.620: [INFO] BookmarksSnapshot Startup total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-09-03 15:24:05.560: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 15:24:05.562: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 15:24:05.563: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 15:24:05.565: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 15:24:10.454: [INFO] Sync initialization duration: 13678ms

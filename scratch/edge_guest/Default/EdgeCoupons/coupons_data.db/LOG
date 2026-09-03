@@ -1,0 +1,6 @@
+2026/09/03-20:54:00.929 cd4 Reusing MANIFEST D:\CODE\F1 Game\scratch\edge_guest\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/09/03-20:54:00.935 cd4 Recovering log #3
+2026/09/03-20:54:00.937 cd4 Reusing old log D:\CODE\F1 Game\scratch\edge_guest\Default\EdgeCoupons/coupons_data.db/000003.log 
+2026/09/03-20:55:55.378 18e0 Level-0 table #5: started
+2026/09/03-20:55:55.853 18e0 Level-0 table #5: 683284 bytes OK
+2026/09/03-20:55:56.211 18e0 Delete type=0 #3

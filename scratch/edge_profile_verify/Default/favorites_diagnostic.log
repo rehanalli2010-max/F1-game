@@ -1,0 +1,31 @@
+2026-09-03 16:54:41.667: [INFO] CurrentProfilePath: D:\CODE\F1 Game\scratch\edge_profile_verify\Default
+2026-09-03 16:54:41.667: [INFO] Profiles total count: 1
+2026-09-03 16:54:41.667: [INFO] Profile: name=Profile 1 path=D:\CODE\F1 Game\scratch\edge_profile_verify\Default lastActive=null
+2026-09-03 16:54:41.667: [INFO] LastUsedProfileDir: D:\CODE\F1 Game\scratch\edge_profile_verify\Default
+2026-09-03 16:54:41.667: [INFO] VisibilityChanged: 0
+2026-09-03 16:54:41.689: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.691: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.691: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.694: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.695: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.695: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.696: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.696: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.696: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.697: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:41.715: [INFO] OnDoneLoading sync enabled: 0
+2026-09-03 16:54:41.715: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-09-03 16:54:41.715: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-09-03 16:54:41.716: [INFO] BookmarksSnapshot Startup total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-09-03 16:54:43.171: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:46.879: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-09-03 16:54:46.887: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-09-03 16:54:46.896: [INFO] Primary account changed.
+2026-09-03 16:54:46.896: [INFO] OnPrimaryAccountChanged PrimaryAccountChangeEvent::Type::kSet
+2026-09-03 16:54:46.920: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-09-03 16:54:47.190: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-09-03 16:54:54.124: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 16:54:54.125: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 16:54:54.125: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 16:54:54.125: [INFO] BookmarkNodeAdded, ABU: 0
+2026-09-03 16:54:54.843: [INFO] Sync initialization duration: 7583ms

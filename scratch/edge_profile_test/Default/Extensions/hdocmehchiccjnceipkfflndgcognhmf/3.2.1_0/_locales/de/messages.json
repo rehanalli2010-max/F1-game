@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Symbolleiste deaktivieren"
+   },
+   "cinema_mode": {
+      "message": "Theatermodus"
+   },
+   "create_screenshot": {
+      "message": "Screenshot erstellen"
+   },
+   "float_video": {
+      "message": "Float Video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Tastatürkürzel"
+   },
+   "loop_video": {
+      "message": "Video schleifen"
+   },
+   "msg_popup_1": {
+      "message": "Siehst du oft Videos? Unsere Erweiterung wird Ihnen helfen, eine angenehmere Erfahrung mit YouTube-Videos zu machen"
+   },
+   "msg_popup_2": {
+      "message": "Mit dieser Software-Erweiterung können Sie:"
+   },
+   "msg_popup_3": {
+      "message": "Sie können die Anzeigen entfernen und die Lautstärke des Videos auf 600% erhöhen."
+   },
+   "msg_popup_4": {
+      "message": "Spielen Sie das Video im Floating-Modus ab und bewegen Sie den Mini-Player frei auf eine beliebige Stelle auf Ihrem Desktop."
+   },
+   "msg_popup_5": {
+      "message": "Spielen Sie das Video im Floating-Modus ab und bewegen Sie den Mini-Player frei auf eine beliebige Stelle auf Ihrem Desktop."
+   },
+   "remove_ads": {
+      "message": "Anzeigen entfernen"
+   }
+}

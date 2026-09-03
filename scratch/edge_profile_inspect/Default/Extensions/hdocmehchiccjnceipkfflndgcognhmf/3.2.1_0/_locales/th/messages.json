@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "ปิดการใช้งานแถบเครื่องมือ"
+   },
+   "cinema_mode": {
+      "message": "โหมดโรงภาพยนตร์"
+   },
+   "create_screenshot": {
+      "message": "สร้างภาพหน้าจอ"
+   },
+   "float_video": {
+      "message": "ลอยวิดีโอ"
+   },
+   "keyboard_shortcuts": {
+      "message": "แป้นพิมพ์ลัด"
+   },
+   "loop_video": {
+      "message": "วิดีโอวนซ้ำ"
+   },
+   "msg_popup_1": {
+      "message": "คุณดูวิดีโอบ่อยไหม ส่วนขยายของเราจะช่วยให้คุณมีประสบการณ์ที่สนุกสนานมากขึ้นกับวิดีโอ youtube"
+   },
+   "msg_popup_2": {
+      "message": "ส่วนขยายซอฟต์แวร์นี้ช่วยให้คุณ:"
+   },
+   "msg_popup_3": {
+      "message": "คุณสามารถลบโฆษณาเพิ่มระดับเสียงของวิดีโอเป็น 600%"
+   },
+   "msg_popup_4": {
+      "message": "เล่นวิดีโอในโหมดลอยและเคลื่อนย้ายเครื่องเล่นขนาดเล็กไปที่ใดก็ได้บนเดสก์ท็อปของคุณอย่างอิสระ"
+   },
+   "msg_popup_5": {
+      "message": "เล่นวิดีโอในโหมดลอยและเคลื่อนย้ายเครื่องเล่นขนาดเล็กไปที่ใดก็ได้บนเดสก์ท็อปของคุณอย่างอิสระ"
+   },
+   "remove_ads": {
+      "message": "ลบโฆษณา"
+   }
+}

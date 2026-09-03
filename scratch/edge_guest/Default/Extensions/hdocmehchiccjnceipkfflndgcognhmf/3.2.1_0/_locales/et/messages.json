@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Keela tööriistariba"
+   },
+   "cinema_mode": {
+      "message": "Teatrirežiim"
+   },
+   "create_screenshot": {
+      "message": "Loo ekraanipilt"
+   },
+   "float_video": {
+      "message": "Ujuki video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Klaviatuuri otseteed"
+   },
+   "loop_video": {
+      "message": "Silmusvideo"
+   },
+   "msg_popup_1": {
+      "message": "Kas vaatate videoid sageli? Meie laiendus aitab teil youtube&#39;i videotega mõnusamaid kogemusi saada"
+   },
+   "msg_popup_2": {
+      "message": "See tarkvaralaiend võimaldab teil:"
+   },
+   "msg_popup_3": {
+      "message": "Saate reklaamid eemaldada, suurendades video mahtu 600% -ni."
+   },
+   "msg_popup_4": {
+      "message": "esitage videot hõljuvas režiimis ja liigutage mini-mängijat vabalt ükskõik kuhu oma töölaual."
+   },
+   "msg_popup_5": {
+      "message": "esitage videot hõljuvas režiimis ja liigutage mini-mängijat vabalt ükskõik kuhu oma töölaual."
+   },
+   "remove_ads": {
+      "message": "Eemalda kuulutused"
+   }
+}

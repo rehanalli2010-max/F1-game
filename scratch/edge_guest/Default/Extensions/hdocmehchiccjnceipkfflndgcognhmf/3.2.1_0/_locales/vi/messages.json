@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Tắt thanh công cụ"
+   },
+   "cinema_mode": {
+      "message": "Chế độ rạp hát"
+   },
+   "create_screenshot": {
+      "message": "Tạo ảnh chụp màn hình"
+   },
+   "float_video": {
+      "message": "Video nổi"
+   },
+   "keyboard_shortcuts": {
+      "message": "Các phím tắt bàn phím"
+   },
+   "loop_video": {
+      "message": "Vòng lặp video"
+   },
+   "msg_popup_1": {
+      "message": "Bạn có xem video thường xuyên không? Tiện ích mở rộng của chúng tôi sẽ giúp bạn có trải nghiệm thú vị hơn với các video trên youtube"
+   },
+   "msg_popup_2": {
+      "message": "Phần mở rộng phần mềm này cho phép bạn:"
+   },
+   "msg_popup_3": {
+      "message": "Bạn có thể loại bỏ quảng cáo, tăng âm lượng của video lên 600%."
+   },
+   "msg_popup_4": {
+      "message": "phát video ở chế độ Nổi và tự do di chuyển trình phát mini đến bất kỳ đâu trên màn hình của bạn."
+   },
+   "msg_popup_5": {
+      "message": "phát video ở chế độ Nổi và tự do di chuyển trình phát mini đến bất kỳ đâu trên màn hình của bạn."
+   },
+   "remove_ads": {
+      "message": "Loại bỏ các quảng cáo"
+   }
+}

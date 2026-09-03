@@ -1,0 +1,5 @@
+2026/09/03-22:24:45.447 e38 Creating DB D:\CODE\F1 Game\scratch\edge_profile_verify\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/09/03-22:24:45.719 e38 Reusing MANIFEST D:\CODE\F1 Game\scratch\edge_profile_verify\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/09/03-22:25:03.080 55c Level-0 table #5: started
+2026/09/03-22:25:03.131 55c Level-0 table #5: 683284 bytes OK
+2026/09/03-22:25:03.167 55c Delete type=0 #3

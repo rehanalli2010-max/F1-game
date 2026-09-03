@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Dezactivați bara de instrumente"
+   },
+   "cinema_mode": {
+      "message": "Mod de teatru"
+   },
+   "create_screenshot": {
+      "message": "Creați ecran"
+   },
+   "float_video": {
+      "message": "Float Video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Comenzile rapide de la tastatură"
+   },
+   "loop_video": {
+      "message": "Clip repetitiv"
+   },
+   "msg_popup_1": {
+      "message": "Vizionați videoclipuri des? Extensia noastră vă va ajuta să aveți o experiență mai plăcută cu videoclipuri YouTube"
+   },
+   "msg_popup_2": {
+      "message": "Această extensie software vă permite să:"
+   },
+   "msg_popup_3": {
+      "message": "Puteți elimina anunțurile, puteți crește volumul videoclipului la 600%."
+   },
+   "msg_popup_4": {
+      "message": "redați videoclipul în modul Floating și mutați liber mini playerul oriunde pe desktop."
+   },
+   "msg_popup_5": {
+      "message": "redați videoclipul în modul Floating și mutați liber mini playerul oriunde pe desktop."
+   },
+   "remove_ads": {
+      "message": "Elimina anunțurile"
+   }
+}

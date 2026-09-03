@@ -1,0 +1,6 @@
+2026/09/03-22:25:07.855 3d44 Creating DB D:\CODE\F1 Game\scratch\edge_profile_verify\Default\IndexedDB\chrome-extension_pdffkfellgipmhklpdmokmckkkfcopbh_0.indexeddb.leveldb since it was missing.
+2026/09/03-22:25:07.982 3d44 Reusing MANIFEST D:\CODE\F1 Game\scratch\edge_profile_verify\Default\IndexedDB\chrome-extension_pdffkfellgipmhklpdmokmckkkfcopbh_0.indexeddb.leveldb/MANIFEST-000001
+2026/09/03-22:25:08.230 55c Level-0 table #5: started
+2026/09/03-22:25:08.343 55c Level-0 table #5: 637 bytes OK
+2026/09/03-22:25:08.402 55c Delete type=0 #3
+2026/09/03-22:25:08.403 55c Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)

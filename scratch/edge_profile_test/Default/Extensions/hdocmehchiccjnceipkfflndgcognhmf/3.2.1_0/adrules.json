@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "resourceTypes": ["main_frame", "sub_frame", "script", "stylesheet", "image", "other", "object", "media", "xmlhttprequest"],
+            "regexFilter": ".*((doubleclick)|(buysellads)|(pagead)|(ads)|(api\\/stats)|(plausible)|(stats)|(google\\.com\\/log)|(ad_break)).*",
+            "initiatorDomains": [
+                "youtube.com",
+                "tpc.googlesyndication.com"
+            ],
+            "isUrlFilterCaseSensitive": false
+        }
+    },
+    {
+        "id": 2,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "resourceTypes": ["main_frame", "sub_frame", "script", "stylesheet", "image", "other", "object", "media", "xmlhttprequest"],
+            "regexFilter": ".*((log_event)|(generate_204)|(gen_204)|(tracking)|(pcs)|(adservice\\.google)|(ad_type)|(adurl)|(adunit)|(googlesyndication)).*",
+            "initiatorDomains": [
+                "youtube.com",
+                "tpc.googlesyndication.com"
+            ],
+            "isUrlFilterCaseSensitive": false
+        }
+    },
+    {
+        "id": 3,
+        "priority": 1,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "resourceTypes": ["main_frame", "sub_frame", "script", "stylesheet", "image", "other", "object", "media", "xmlhttprequest"],
+            "regexFilter": ".*((innovid)|(flashtalking)|(midroll)).*",
+            "initiatorDomains": [
+                "youtube.com",
+                "tpc.googlesyndication.com"
+            ],
+            "isUrlFilterCaseSensitive": false
+        }
+    }
+]

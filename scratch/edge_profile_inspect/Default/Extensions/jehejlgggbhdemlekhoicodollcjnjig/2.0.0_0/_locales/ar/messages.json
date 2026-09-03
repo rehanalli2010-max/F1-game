@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "تفعيل لجميع المواقع"
+   },
+   "enableForCurrentSite": {
+      "message": "تفعيل للموقع الحالي"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - حجب إعلانات قوي، تحسين الخصوصية، تعزيز الأمان، سهولة الاستخدام، سرعات تحميل أسرع، وعمر بطارية أطول."
+   },
+   "extName": {
+      "message": "Ad Blocker"
+   }
+}

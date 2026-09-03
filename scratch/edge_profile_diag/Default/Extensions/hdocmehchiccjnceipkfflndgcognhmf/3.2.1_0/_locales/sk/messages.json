@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Zakázať panel s nástrojmi"
+   },
+   "cinema_mode": {
+      "message": "Divadelný režim"
+   },
+   "create_screenshot": {
+      "message": "Vytvorte snímku obrazovky"
+   },
+   "float_video": {
+      "message": "Plávajúce video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Klávesové skratky"
+   },
+   "loop_video": {
+      "message": "Slučkové video"
+   },
+   "msg_popup_1": {
+      "message": "Pozeráte videá často? Naše rozšírenie vám pomôže zažiť príjemnejší zážitok s videami na youtube"
+   },
+   "msg_popup_2": {
+      "message": "Toto rozšírenie softvéru vám umožňuje:"
+   },
+   "msg_popup_3": {
+      "message": "Môžete odstrániť reklamy, zvýšiť hlasitosť videa na 600%."
+   },
+   "msg_popup_4": {
+      "message": "Prehrajte video v plávajúcom režime a voľne premiestnite mini prehrávač kdekoľvek na pracovnej ploche."
+   },
+   "msg_popup_5": {
+      "message": "Prehrajte video v plávajúcom režime a voľne premiestnite mini prehrávač kdekoľvek na pracovnej ploche."
+   },
+   "remove_ads": {
+      "message": "Odstrániť reklamy"
+   }
+}

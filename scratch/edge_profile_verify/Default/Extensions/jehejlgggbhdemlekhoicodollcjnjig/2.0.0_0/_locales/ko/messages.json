@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "모든 사이트에서 활성화"
+   },
+   "enableForCurrentSite": {
+      "message": "현재 사이트에서 활성화"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - 강력한 광고 차단, 개인 정보 보호 향상, 보안 강화, 사용하기 쉬움, 더 빠른 로딩 속도 및 더 긴 배터리 수명."
+   },
+   "extName": {
+      "message": "Ad Blocker"
+   }
+}

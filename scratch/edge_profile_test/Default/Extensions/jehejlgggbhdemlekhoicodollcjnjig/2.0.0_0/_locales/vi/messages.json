@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "Kích hoạt cho tất cả các trang web"
+   },
+   "enableForCurrentSite": {
+      "message": "Kích hoạt cho trang hiện tại"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - Chặn quảng cáo mạnh mẽ, cải thiện quyền riêng tư, tăng cường an ninh, dễ sử dụng, tốc độ tải trang nhanh hơn, và thời lượng pin lâu hơn."
+   },
+   "extName": {
+      "message": "Trình chặn quảng cáo"
+   }
+}

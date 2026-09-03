@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Onemogući alatnu traku"
+   },
+   "cinema_mode": {
+      "message": "Kazališni način"
+   },
+   "create_screenshot": {
+      "message": "Stvorite zaslon"
+   },
+   "float_video": {
+      "message": "Lebdeći video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Prečaci na tipkovnici"
+   },
+   "loop_video": {
+      "message": "Video s petljom"
+   },
+   "msg_popup_1": {
+      "message": "Gledate li videozapise često? Naše proširenje pomoći će vam da uživate u doživljaju videozapisa na youtubeu"
+   },
+   "msg_popup_2": {
+      "message": "Ovo softversko proširenje omogućuje vam:"
+   },
+   "msg_popup_3": {
+      "message": "Možete ukloniti oglase, povećati glasnoću videozapisa na 600%."
+   },
+   "msg_popup_4": {
+      "message": "reproducirajte video u plutajućem načinu i slobodno premjestite mini player bilo gdje na radnoj površini."
+   },
+   "msg_popup_5": {
+      "message": "reproducirajte video u plutajućem načinu i slobodno premjestite mini player bilo gdje na radnoj površini."
+   },
+   "remove_ads": {
+      "message": "Makni reklame"
+   }
+}

@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "禁用工具列"
+   },
+   "cinema_mode": {
+      "message": "劇院模式"
+   },
+   "create_screenshot": {
+      "message": "創建截圖"
+   },
+   "float_video": {
+      "message": "浮動視頻"
+   },
+   "keyboard_shortcuts": {
+      "message": "鍵盤快捷鍵"
+   },
+   "loop_video": {
+      "message": "循環播放視頻"
+   },
+   "msg_popup_1": {
+      "message": "你經常看視頻嗎？我們的擴展程序將幫助您在使用YouTube視頻時獲得更愉快的體驗"
+   },
+   "msg_popup_2": {
+      "message": "該軟件擴展使您可以："
+   },
+   "msg_popup_3": {
+      "message": "您可以刪除廣告，將視頻的音量提高到600％。"
+   },
+   "msg_popup_4": {
+      "message": "以浮動模式播放視頻，然後將迷你播放器自由移動到桌面上的任何位置。"
+   },
+   "msg_popup_5": {
+      "message": "以浮動模式播放視頻，然後將迷你播放器自由移動到桌面上的任何位置。"
+   },
+   "remove_ads": {
+      "message": "移除廣告"
+   }
+}

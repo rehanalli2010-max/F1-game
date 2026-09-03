@@ -1,0 +1,14 @@
+{
+   "enableForAllSites": {
+      "message": "Włącz dla wszystkich stron"
+   },
+   "enableForCurrentSite": {
+      "message": "Włącz dla bieżącej strony"
+   },
+   "extDesc": {
+      "message": "AdBlock for Edge - Potężne blokowanie reklam, zwiększenie prywatności, poprawa bezpieczeństwa, łatwość użycia, szybsze ładowanie stron i dłuższy czas pracy baterii."
+   },
+   "extName": {
+      "message": "Ad Blocker"
+   }
+}

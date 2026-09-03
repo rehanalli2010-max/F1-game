@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Деактивирайте лентата с инструменти"
+   },
+   "cinema_mode": {
+      "message": "Театрален режим"
+   },
+   "create_screenshot": {
+      "message": "Създаване на екрана"
+   },
+   "float_video": {
+      "message": "Float Video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Комбинация от клавиши"
+   },
+   "loop_video": {
+      "message": "Loop Video"
+   },
+   "msg_popup_1": {
+      "message": "Гледате ли видеоклипове често? Нашето разширение ще ви помогне да имате по-приятно изживяване с видеоклипове в YouTube"
+   },
+   "msg_popup_2": {
+      "message": "Това софтуерно разширение ви позволява да:"
+   },
+   "msg_popup_3": {
+      "message": "Можете да премахнете рекламите, да увеличите обема на видеоклипа до 600%."
+   },
+   "msg_popup_4": {
+      "message": "възпроизвеждайте видеото в плаващ режим и свободно премествайте мини плейъра навсякъде на вашия работен плот."
+   },
+   "msg_popup_5": {
+      "message": "възпроизвеждайте видеото в плаващ режим и свободно премествайте мини плейъра навсякъде на вашия работен плот."
+   },
+   "remove_ads": {
+      "message": "Премахни рекламите"
+   }
+}

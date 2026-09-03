@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Werkbalk uitschakelen"
+   },
+   "cinema_mode": {
+      "message": "Theatermodus"
+   },
+   "create_screenshot": {
+      "message": "Maak een screenshot"
+   },
+   "float_video": {
+      "message": "Zwevende video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Toetsenbord sneltoetsen"
+   },
+   "loop_video": {
+      "message": "Loop video"
+   },
+   "msg_popup_1": {
+      "message": "Kijk je vaak naar video&#39;s? Onze extensie zal je helpen een leukere ervaring te hebben met YouTube-video&#39;s"
+   },
+   "msg_popup_2": {
+      "message": "Met deze software-extensie kunt u:"
+   },
+   "msg_popup_3": {
+      "message": "U kunt de advertenties verwijderen, het volume van de video verhogen tot 600%."
+   },
+   "msg_popup_4": {
+      "message": "speel de video af in de zwevende modus en verplaats de minispeler vrijelijk overal op uw bureaublad."
+   },
+   "msg_popup_5": {
+      "message": "speel de video af in de zwevende modus en verplaats de minispeler vrijelijk overal op uw bureaublad."
+   },
+   "remove_ads": {
+      "message": "Verwijder advertenties"
+   }
+}

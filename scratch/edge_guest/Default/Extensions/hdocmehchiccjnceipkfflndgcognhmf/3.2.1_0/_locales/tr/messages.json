@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Araç çubuğunu devre dışı bırak"
+   },
+   "cinema_mode": {
+      "message": "Tiyatro Modu"
+   },
+   "create_screenshot": {
+      "message": "Ekran Görüntüsü Oluştur"
+   },
+   "float_video": {
+      "message": "Float Video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Klavye kısayolları"
+   },
+   "loop_video": {
+      "message": "Tekrarlanan video"
+   },
+   "msg_popup_1": {
+      "message": "Sık sık video izliyor musunuz? Uzantımız, youtube videolarıyla daha keyifli bir deneyim yaşamanıza yardımcı olacak"
+   },
+   "msg_popup_2": {
+      "message": "Bu yazılım uzantısı şunları yapmanızı sağlar:"
+   },
+   "msg_popup_3": {
+      "message": "Reklamları kaldırabilir, videonun sesini% 600&#39;e çıkarabilirsiniz."
+   },
+   "msg_popup_4": {
+      "message": "videoyu Yüzer modda oynatın ve mini oynatıcıyı masaüstünüzde istediğiniz yere serbestçe taşıyın."
+   },
+   "msg_popup_5": {
+      "message": "videoyu Yüzer modda oynatın ve mini oynatıcıyı masaüstünüzde istediğiniz yere serbestçe taşıyın."
+   },
+   "remove_ads": {
+      "message": "Reklamları kaldırmak"
+   }
+}

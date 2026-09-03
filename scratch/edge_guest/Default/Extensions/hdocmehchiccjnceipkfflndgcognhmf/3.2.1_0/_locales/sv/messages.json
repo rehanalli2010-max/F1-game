@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Inaktivera verktygsfältet"
+   },
+   "cinema_mode": {
+      "message": "Teaterläge"
+   },
+   "create_screenshot": {
+      "message": "Skapa skärmdump"
+   },
+   "float_video": {
+      "message": "Float Video"
+   },
+   "keyboard_shortcuts": {
+      "message": "Tangentbordsgenvägar"
+   },
+   "loop_video": {
+      "message": "Rundgångsfilm"
+   },
+   "msg_popup_1": {
+      "message": "Ser du ofta på videor? Vår tillägg hjälper dig att få en trevligare upplevelse med YouTube-videor"
+   },
+   "msg_popup_2": {
+      "message": "Denna programtillägg gör att du kan:"
+   },
+   "msg_popup_3": {
+      "message": "Du kan ta bort annonserna, öka volymen på videon till 600%."
+   },
+   "msg_popup_4": {
+      "message": "spela upp videon i flytande läge och flytta minispelaren fritt var som helst på skrivbordet."
+   },
+   "msg_popup_5": {
+      "message": "spela upp videon i flytande läge och flytta minispelaren fritt var som helst på skrivbordet."
+   },
+   "remove_ads": {
+      "message": "Ta bort annonser"
+   }
+}

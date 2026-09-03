@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "टूलबार अक्षम करें"
+   },
+   "cinema_mode": {
+      "message": "थिएटर मोड"
+   },
+   "create_screenshot": {
+      "message": "स्क्रीनशॉट बनाएँ"
+   },
+   "float_video": {
+      "message": "फ्लोट वीडियो"
+   },
+   "keyboard_shortcuts": {
+      "message": "कुंजीपटल अल्प मार्ग"
+   },
+   "loop_video": {
+      "message": "लूप विडियो"
+   },
+   "msg_popup_1": {
+      "message": "क्या आप अक्सर वीडियो देखते हैं? हमारा एक्सटेंशन आपको YouTube वीडियो के साथ अधिक सुखद अनुभव प्रदान करने में मदद करेगा"
+   },
+   "msg_popup_2": {
+      "message": "यह सॉफ़्टवेयर एक्सटेंशन आपको इसकी अनुमति देता है:"
+   },
+   "msg_popup_3": {
+      "message": "आप विज्ञापनों को हटा सकते हैं, वीडियो की मात्रा 600% तक बढ़ा सकते हैं।"
+   },
+   "msg_popup_4": {
+      "message": "वीडियो को फ़्लोटिंग मोड में चलाएं और अपने डेस्कटॉप पर कहीं भी मिनी प्लेयर को आज़ादी से चलाएं।"
+   },
+   "msg_popup_5": {
+      "message": "वीडियो को फ़्लोटिंग मोड में चलाएं और अपने डेस्कटॉप पर कहीं भी मिनी प्लेयर को आज़ादी से चलाएं।"
+   },
+   "remove_ads": {
+      "message": "विज्ञापन हटाएँ"
+   }
+}

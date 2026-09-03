@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "툴바 비활성화"
+   },
+   "cinema_mode": {
+      "message": "극장 모드"
+   },
+   "create_screenshot": {
+      "message": "스크린 샷 만들기"
+   },
+   "float_video": {
+      "message": "플로트 비디오"
+   },
+   "keyboard_shortcuts": {
+      "message": "키보드 단축키"
+   },
+   "loop_video": {
+      "message": "반복 영상"
+   },
+   "msg_popup_1": {
+      "message": "비디오를 자주 보십니까? 우리의 확장은 당신이 유튜브 비디오를 더 즐겁게 경험할 수 있도록 도와 줄 것입니다"
+   },
+   "msg_popup_2": {
+      "message": "이 소프트웨어 확장을 사용하면 다음을 수행 할 수 있습니다."
+   },
+   "msg_popup_3": {
+      "message": "광고를 제거하고 비디오 볼륨을 600 %로 늘릴 수 있습니다."
+   },
+   "msg_popup_4": {
+      "message": "플로팅 모드에서 비디오를 재생하고 미니 플레이어를 데스크탑 어디로 든 자유롭게 이동할 수 있습니다."
+   },
+   "msg_popup_5": {
+      "message": "플로팅 모드에서 비디오를 재생하고 미니 플레이어를 데스크탑 어디로 든 자유롭게 이동할 수 있습니다."
+   },
+   "remove_ads": {
+      "message": "광고를 제거하다"
+   }
+}

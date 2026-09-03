@@ -1,0 +1,1 @@
+import{ubolErr}from"./debug.js";function fetchJSON(t){return fetch(`${t}.json`).then((t=>t.json())).catch((t=>{ubolErr(`fetchJSON/${t}`)}))}export{fetchJSON};

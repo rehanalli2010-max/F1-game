@@ -1,0 +1,44 @@
+{
+   "AppDesc": {
+      "message": "Block all Youtube Ads! Augment your YouTube experience with Fullscreen Theater Mode, Video Screenshot, Volume Booster and many more"
+   },
+   "AppName": {
+      "message": "Adblocker for Youtube™"
+   },
+   "DisableToolbar": {
+      "message": "Απενεργοποιήστε τη γραμμή εργαλείων"
+   },
+   "cinema_mode": {
+      "message": "Λειτουργία θεάτρου"
+   },
+   "create_screenshot": {
+      "message": "Δημιουργία στιγμιότυπου οθόνης"
+   },
+   "float_video": {
+      "message": "Float βίντεο"
+   },
+   "keyboard_shortcuts": {
+      "message": "Συντομεύσεις πληκτρολογίου"
+   },
+   "loop_video": {
+      "message": "Βρόχο βίντεο"
+   },
+   "msg_popup_1": {
+      "message": "Βλέπετε συχνά βίντεο; Η επέκτασή μας θα σας βοηθήσει να έχετε μια πιο ευχάριστη εμπειρία με τα βίντεο του YouTube"
+   },
+   "msg_popup_2": {
+      "message": "Αυτή η επέκταση λογισμικού σάς επιτρέπει:"
+   },
+   "msg_popup_3": {
+      "message": "Μπορείτε να καταργήσετε τις διαφημίσεις, να αυξήσετε τον όγκο του βίντεο σε 600%."
+   },
+   "msg_popup_4": {
+      "message": "αναπαραγάγετε το βίντεο σε λειτουργία Floating και μετακινήστε ελεύθερα το mini player οπουδήποτε στην επιφάνεια εργασίας σας."
+   },
+   "msg_popup_5": {
+      "message": "αναπαραγάγετε το βίντεο σε λειτουργία Floating και μετακινήστε ελεύθερα το mini player οπουδήποτε στην επιφάνεια εργασίας σας."
+   },
+   "remove_ads": {
+      "message": "Αφαίρεσε τις διαφημίσεις"
+   }
+}
