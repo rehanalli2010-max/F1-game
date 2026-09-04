@@ -884,6 +884,87 @@ html, body {
   100% { background: #ffffff; box-shadow: 0 0 18px #ffffff; }
 }
 
+/* Phase 5: Tachometer Bar (smooth visual RPM gauge) */
+.tachometer-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg,
+    rgba(0, 210, 190, 0.18) 0%,
+    rgba(0, 210, 190, 0.18) 55%,
+    rgba(255, 215, 0, 0.18) 55%,
+    rgba(255, 215, 0, 0.18) 75%,
+    rgba(225, 6, 0, 0.25) 75%,
+    rgba(225, 6, 0, 0.25) 100%);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.tach-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00d2be 0%, #00d2be 55%, #ffd000 75%, #ff0505 95%);
+  border-radius: 3px 0 0 3px;
+  transition: width 0.06s linear;
+}
+
+.tach-fill.over-red {
+  background: linear-gradient(90deg, #ff0505 0%, #ffffff 100%);
+  box-shadow: 0 0 10px #ff0505;
+}
+
+.tach-marker {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* Phase 5: Sector Delta Tracker */
+.sector-deltas {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.sd-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-family: var(--f1-font-digital);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.sd-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--f1-text-dim);
+  letter-spacing: 1px;
+}
+
+.sd-value {
+  font-weight: 700;
+  color: #fff;
+}
+
+.sd-cell.green .sd-value { color: #00d2be; }
+.sd-cell.red .sd-value { color: #ff6b6b; }
+.sd-cell.purple .sd-value { color: #b026ff; }
+.sd-cell.neutral .sd-value { color: var(--f1-text-dim); }
+
 /* Main Speed and Gear Display */
 .speed-gear-main {
   display: flex;
@@ -992,6 +1073,18 @@ html, body {
   color: #0b0e14;
   border-color: #fff;
   box-shadow: 0 0 10px var(--f1-green);
+}
+
+.drift-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #ff7700;
+  color: #fff;
+  border-color: #ffa500;
+  box-shadow: 0 0 10px #ff7700;
 }
 
 /* ==========================================================================

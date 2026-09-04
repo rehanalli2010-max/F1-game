@@ -329,9 +329,9 @@ export class SessionManager {
     // 2. RACE AI GRID DYNAMICS
     if (this.currentMode === SESSION_TYPES.RACE) {
       if (this.raceState === 'RACING' || this.raceState === 'FINISHING') {
-        if (this.aiGrid) {
-          const currentRaceTime = (performance.now() - this.raceStartTime) / 1000;
-          this.aiGrid.update(dt, playerPos, playerVel, this.playerRaceLap, currentRaceTime, this.raceLapsTotal);
+if (this.aiGrid) {
+            const currentRaceTime = (performance.now() - this.raceStartTime) / 1000;
+            this.aiGrid.update(dt, playerPos, playerVel, this.playerRaceLap, currentRaceTime, this.raceLapsTotal, this.audio);
 
           // Check if an AI leader finished all race laps first
           if (!this.leaderFinished) {
@@ -494,10 +494,44 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Reset all session state variables to clean defaults.
+   * Called when switching tracks to prevent stale state from previous session.
+   */
+  resetSessionState() {
+    // Race state
+    this.raceState = 'PRE_START';
+    this.playerRaceLap = 1;
+    this.playerGridPos = 1;
+    this.raceStartTime = 0;
+    this.jumpStart = false;
+    this.leaderFinished = false;
+    this.raceWinner = null;
+    if (this.finishTimeout) {
+      clearTimeout(this.finishTimeout);
+      this.finishTimeout = null;
+    }
+
+    // Starting Lights timer state
+    this.gantryStep = 0;
+    if (this.gantryTimer) {
+      clearTimeout(this.gantryTimer);
+      this.gantryTimer = null;
+    }
+
+    // Qualifying state
+    this.qualifyingPhase = 'OUT_LAP';
+    this.qualifyingResult = null;
+  }
+
   clearAllTimers() {
     if (this.gantryTimer) {
       clearTimeout(this.gantryTimer);
       this.gantryTimer = null;
+    }
+    if (this.finishTimeout) {
+      clearTimeout(this.finishTimeout);
+      this.finishTimeout = null;
     }
     if (this.track && typeof this.track.setGantryLights === 'function') {
       this.track.setGantryLights(0);

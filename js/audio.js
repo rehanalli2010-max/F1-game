@@ -31,6 +31,7 @@ export class AudioManager {
     this.previousThrottle = 0;
     this.turboBoost = 0; // 0 to 1
     this.lastPopTime = 0;
+    this._lastImpactAt = 0;
 
     // Harmonic Combustion Oscillators
     this.oscFund = null;    // Firing order fundamental (f0 = RPM/60 * 3)
@@ -691,22 +692,85 @@ export class AudioManager {
   }
 
   /**
-   * Crisp broadcast beep for 5-red starting light illumination
+   * Distinct-pitch broadcast beep for each of the 5 red starting lights.
+   * Light 1 is the lowest tone; light 5 is the highest before lights-out.
    */
-  playStartLightBeep() {
+  playStartLightBeep(lightNumber = 1) {
     if (!this.isInitialized || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
+    const freqs = [0, 440, 554, 659, 784, 932];
+    const idx = Math.max(1, Math.min(5, lightNumber | 0));
+    const freq = freqs[idx];
+
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(780, t);
-    gain.gain.setValueAtTime(0.18, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.20, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.20);
 
     osc.connect(gain);
     gain.connect(this.masterGain);
     osc.start(t);
-    osc.stop(t + 0.20);
+    osc.stop(t + 0.22);
+
+    // Subtle second harmonic so each column reads as a unique FIA tone
+    const harm = this.ctx.createOscillator();
+    const harmGain = this.ctx.createGain();
+    harm.type = 'triangle';
+    harm.frequency.setValueAtTime(freq * 2, t);
+    harmGain.gain.setValueAtTime(0.05, t);
+    harmGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    harm.connect(harmGain);
+    harmGain.connect(this.masterGain);
+    harm.start(t);
+    harm.stop(t + 0.16);
+  }
+
+  /**
+   * Low-frequency burst oscillator for barrier / wall impacts.
+   * Intensity is expected in roughly m/s of closing speed.
+   */
+  playWallImpact(intensity = 1.0) {
+    if (!this.isInitialized || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (this._lastImpactAt && t - this._lastImpactAt < 0.12) return;
+    this._lastImpactAt = t;
+
+    const mag = Math.max(0.18, Math.min(1.0, intensity / 18));
+
+    // Sub-bass body thump
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(72 + mag * 50, t);
+    osc.frequency.exponentialRampToValueAtTime(26, t + 0.20);
+    gain.gain.setValueAtTime(0.42 * mag, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.26);
+
+    // Short filtered noise crack for carbon/armco contact
+    const nLen = Math.floor(this.ctx.sampleRate * 0.09);
+    const buf = this.ctx.createBuffer(1, nLen, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < nLen; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (nLen * 0.28));
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(280 + mag * 220, t);
+    bp.Q.setValueAtTime(1.6, t);
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(0.28 * mag, t);
+    src.connect(bp);
+    bp.connect(nGain);
+    nGain.connect(this.masterGain);
+    src.start(t);
   }
 
   /**
@@ -761,6 +825,9 @@ export class AudioManager {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.18, this.ctx.currentTime);
+      if (!this.isMuted && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
     }
     return this.isMuted;
   }

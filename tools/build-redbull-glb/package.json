@@ -1,0 +1,14 @@
+{
+  "name": "build-redbull-glb",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Procedurally builds the Red Bull F1 car model and exports it to assets/models/redbull.glb via Three.js GLTFExporter.",
+  "scripts": {
+    "build": "node build_redbull_glb.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.55",
+    "three": "0.160.0"
+  }
+}

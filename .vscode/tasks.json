@@ -12,7 +12,7 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": ".*",
+          "beginsPattern": ".*Starting F1 Game Server.*",
           "endsPattern": ".*F1 Game Server running at.*"
         }
       },

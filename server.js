@@ -46,15 +46,19 @@ const server = http.createServer((req, res) => {
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.log(`Port ${PORT} is already running. F1 Game Server running at http://localhost:${PORT}/`);
+    console.log(`F1 Game Server running at http://localhost:${PORT}/ (Port ${PORT} in use)`);
     if (process.argv.includes('--open')) {
       exec(`start http://localhost:${PORT}/`);
     }
+    // Keep process alive so VS Code preLaunchTask doesn't report exit code 0
+    setInterval(() => {}, 1000 * 60 * 60);
   } else {
     console.error('Server error:', err);
+    process.exit(1);
   }
 });
 
+console.log('Starting F1 Game Server...');
 server.listen(PORT, () => {
   console.log(`F1 Game Server running at http://localhost:${PORT}/`);
   if (process.argv.includes('--open')) {

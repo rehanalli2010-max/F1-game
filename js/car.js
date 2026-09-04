@@ -1,10 +1,604 @@
 import * as THREE from 'three';
 import { TextureFactory } from './textures.js';
+import { F1_TEAMS, getTeamById } from './teams_db.js';
+
+const _liveryCanvasCache = new Map();
+const _tireCompoundStripes = {
+  SOFT: { color: '#ff0000', label: 'SOFT' },
+  MEDIUM: { color: '#ffff00', label: 'MEDIUM' },
+  HARD: { color: '#ffffff', label: 'HARD' }
+};
+
+const _compoundNames = ['SOFT', 'MEDIUM', 'HARD'];
+
+/**
+ * Path to the optional external Red Bull GLB body.
+ * When this file exists, Red Bull cars load it in place of the procedural body
+ * while keeping the existing physics chassis, wheels, steering, AI and netcode.
+ * Other teams are unaffected and continue to use the procedural composite body.
+ */
+const RED_BULL_GLB_PATH = 'assets/models/redbull.glb';
+
+/**
+ * GLB body alignment constants.
+ * Adjust these to match the imported Red Bull GLB's natural orientation
+ * (most DCCs export glTF with +Y up, +Z forward, scale in meters).
+ * - BODY_SCALE:        uniform scale of the loaded scene root
+ * - BODY_OFFSET_Y:     vertical offset so the floor of the model sits at the
+ *                      same height as the procedural body (wheel hubs ~y=0)
+ * - BODY_ROTATION_Y:   Y-axis rotation to align the model's "forward" with
+ *                      the chassis +Z (which is the cannon-es forward axis)
+ * - BODY_LENGTH_TARGET: target total length in meters (used to auto-scale if
+ *                       AUTO_SCALE_TO_PHYSICS is true)
+ * - AUTO_SCALE_TO_PHYSICS: when true, BODY_SCALE is recomputed so the model's
+ *                          bounding box matches the physics chassis length
+ */
+const BODY_SCALE = 1.0;
+const BODY_OFFSET_Y = 0.0;
+const BODY_ROTATION_Y = 0.0;
+const AUTO_SCALE_TO_PHYSICS = false;
+const BODY_LENGTH_TARGET = 4.4;
+
+/**
+ * GLB mesh name prefixes to hide, because the existing procedural wheel
+ * system in this file (buildWheels) already drives wheel rotation, steering
+ * and physics sync from cannon-es. Naming your GLB wheels with one of these
+ * prefixes (e.g. wheel_FL, tire_rear_right) suppresses the GLB wheel so you
+ * do not get double wheels.
+ * Set to [] to keep the GLB's wheels visible.
+ */
+const HIDE_GLB_MESH_PREFIXES = ['wheel', 'tire', 'tyre', 'brake', 'rim', 'hub', 'suspension', 'wishbone'];
+
+const _gltfCache = new Map();
+
+/**
+ * Creates a clearcoat carbon-fiber PBR material using MeshPhysicalMaterial
+ * @param {number} baseColor - Base color hex
+ * @param {THREE.Texture} [map] - Optional livery map
+ * @returns {THREE.MeshPhysicalMaterial}
+ */
+function createClearcoatCarbonMaterial(baseColor, map = null) {
+  const carbonTex = TextureFactory.createCarbonFiberTexture(256, 256);
+  carbonTex.wrapS = THREE.RepeatWrapping;
+  carbonTex.wrapT = THREE.RepeatWrapping;
+  carbonTex.repeat.set(8, 8);
+
+  return new THREE.MeshPhysicalMaterial({
+    color: baseColor,
+    map: map,
+    roughness: 0.25,
+    metalness: 0.1,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 1.5,
+    normalMap: carbonTex,
+    normalScale: new THREE.Vector2(0.5, 0.5),
+  });
+}
+
+/**
+ * Creates matte checkered carbon-fiber material for aero elements
+ * @returns {THREE.MeshPhysicalMaterial}
+ */
+function createMatteCarbonMaterial() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0d0e10';
+  ctx.fillRect(0, 0, 256, 256);
+
+  const tileSize = 8;
+  for (let y = 0; y < 256; y += tileSize) {
+    for (let x = 0; x < 256; x += tileSize) {
+      const isDiagonal = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+      ctx.fillStyle = isDiagonal ? '#1a1b1f' : '#0a0b0d';
+      ctx.fillRect(x, y, tileSize, tileSize);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+
+  return new THREE.MeshPhysicalMaterial({
+    map: tex,
+    color: 0x1a1a1a,
+    roughness: 0.85,
+    metalness: 0.35,
+    clearcoat: 0.0,
+    envMapIntensity: 0.3,
+  });
+}
+
+/**
+ * Creates tire compound material with sidewall stripe
+ * @param {string} compound - 'SOFT' | 'MEDIUM' | 'HARD'
+ * @param {string} teamColor - Team accent color for branding
+ * @returns {Object} { tireMat, sidewallMat, stripeColor }
+ */
+function createTireCompoundMaterials(compound, teamColor) {
+  const stripe = _tireCompoundStripes[compound] || _tireCompoundStripes.MEDIUM;
+
+  const tireRubberMat = new THREE.MeshPhysicalMaterial({
+    color: 0x141416,
+    roughness: 0.80,
+    metalness: 0.08,
+    clearcoat: 0.1,
+    clearcoatRoughness: 0.6,
+  });
+
+  const sidewallCanvas = document.createElement('canvas');
+  sidewallCanvas.width = 512;
+  sidewallCanvas.height = 512;
+  const sctx = sidewallCanvas.getContext('2d');
+
+  sctx.fillStyle = '#141416';
+  sctx.fillRect(0, 0, 512, 512);
+
+  for (let i = 0; i < 3000; i++) {
+    const g = 15 + Math.random() * 15;
+    sctx.fillStyle = `rgb(${g},${g},${g})`;
+    sctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+  }
+
+  const cx = 256, cy = 256;
+  sctx.beginPath();
+  sctx.arc(cx, cy, 185, 0, Math.PI * 2);
+  sctx.strokeStyle = stripe.color;
+  sctx.lineWidth = 14;
+  sctx.stroke();
+
+  sctx.beginPath();
+  sctx.arc(cx, cy, 160, 0, Math.PI * 2);
+  sctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  sctx.lineWidth = 2;
+  sctx.stroke();
+
+  const drawCurvedText = (text, radius, startAngle, endAngle, isTop = true) => {
+    sctx.save();
+    sctx.fillStyle = stripe.color;
+    sctx.font = '900 24px sans-serif';
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    const angleStep = (endAngle - startAngle) / text.length;
+    for (let i = 0; i < text.length; i++) {
+      const angle = startAngle + i * angleStep + angleStep / 2;
+      sctx.save();
+      sctx.translate(cx, cy);
+      sctx.rotate(angle);
+      sctx.translate(0, isTop ? -radius : radius);
+      if (!isTop) sctx.rotate(Math.PI);
+      sctx.fillText(text[i], 0, 0);
+      sctx.restore();
+    }
+    sctx.restore();
+  };
+
+  drawCurvedText('PIRELLI', 185, -Math.PI * 0.35, Math.PI * 0.35, true);
+  drawCurvedText(stripe.label, 185, -Math.PI * 0.32, Math.PI * 0.32, false);
+
+  sctx.beginPath();
+  sctx.arc(cx, cy, 140, 0, Math.PI * 2);
+  sctx.fillStyle = '#1c1d21';
+  sctx.fill();
+
+  const sidewallTex = new THREE.CanvasTexture(sidewallCanvas);
+  const sidewallMat = new THREE.MeshBasicMaterial({
+    map: sidewallTex,
+    transparent: true,
+  });
+
+  return { tireMat: tireRubberMat, sidewallMat, stripeColor: stripe.color };
+}
+
+/**
+ * Generates a procedural livery texture for a specific team with racing numbers,
+ * sponsor decals, gradients, and distinct patterns
+ * @param {Object} team - Team data from teams_db.js
+ * @param {number} carNumber - Racing number 1-99
+ * @returns {THREE.CanvasTexture}
+ */
+function generateProceduralLivery(team, carNumber) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  const primary = team.primaryHex || '#' + team.primaryColor.toString(16).padStart(6, '0');
+  const secondary = team.secondaryHex || '#ffffff';
+  const accent = team.accentHex || '#1a1a1a';
+
+  // 1. Base gradient coat
+  const baseGrad = ctx.createLinearGradient(0, 0, 0, 512);
+  baseGrad.addColorStop(0.0, primary);
+  baseGrad.addColorStop(0.5, adjustBrightness(primary, -15));
+  baseGrad.addColorStop(1.0, primary);
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, 1024, 512);
+
+  // 2. Metallic flake
+  for (let i = 0; i < 4000; i++) {
+    const g = Math.random() * 255;
+    ctx.fillStyle = `rgba(${g},${g},${g},0.04)`;
+    ctx.fillRect(Math.random() * 1024, Math.random() * 512, 2, 2);
+  }
+
+  // 3. Team-specific pattern generation
+  drawTeamPattern(ctx, team.id, primary, secondary, accent, carNumber);
+
+  // 4. Common elements: Racing number pod
+  drawNumberPod(ctx, carNumber, secondary, accent);
+
+  // 5. Sponsor decals
+  drawSponsorDecals(ctx, team.id, secondary, accent);
+
+  // 6. Glossy lacquer highlight
+  const gloss = ctx.createLinearGradient(0, 0, 0, 180);
+  gloss.addColorStop(0.0, 'rgba(255,255,255,0.18)');
+  gloss.addColorStop(0.5, 'rgba(255,255,255,0.04)');
+  gloss.addColorStop(1.0, 'rgba(255,255,255,0.0)');
+  ctx.fillStyle = gloss;
+  ctx.fillRect(0, 0, 1024, 180);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function adjustBrightness(hex, amount) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xFF) + amount));
+  const b = Math.max(0, Math.min(255, (num & 0xFF) + amount));
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function drawTeamPattern(ctx, teamId, primary, secondary, accent, carNumber) {
+  switch (teamId) {
+    case 'ferrari':
+      drawFerrariPattern(ctx, primary, secondary, accent);
+      break;
+    case 'redbull':
+      drawRedBullPattern(ctx, primary, secondary, accent);
+      break;
+    case 'mercedes':
+      drawMercedesPattern(ctx, primary, secondary, accent);
+      break;
+    case 'mclaren':
+      drawMcLarenPattern(ctx, primary, secondary, accent);
+      break;
+    case 'astonmartin':
+      drawAstonMartinPattern(ctx, primary, secondary, accent);
+      break;
+    case 'alpine':
+      drawAlpinePattern(ctx, primary, secondary, accent);
+      break;
+    case 'williams':
+      drawWilliamsPattern(ctx, primary, secondary, accent);
+      break;
+    case 'sauber':
+      drawSauberPattern(ctx, primary, secondary, accent);
+      break;
+    case 'haas':
+      drawHaasPattern(ctx, primary, secondary, accent);
+      break;
+    case 'rb':
+      drawRBPattern(ctx, primary, secondary, accent);
+      break;
+    default:
+      drawGenericPattern(ctx, primary, secondary, accent);
+  }
+}
+
+function drawFerrariPattern(ctx, primary, secondary, accent) {
+  // Classic Ferrari: white accent pinstripe along spine
+  ctx.fillStyle = secondary;
+  ctx.beginPath();
+  ctx.moveTo(0, 210);
+  ctx.lineTo(1024, 170);
+  ctx.lineTo(1024, 332);
+  ctx.lineTo(0, 292);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 200, 1024, 10);
+  ctx.fillRect(0, 292, 1024, 10);
+}
+
+function drawRedBullPattern(ctx, primary, secondary, accent) {
+  // Flowing red/blue wave signature
+  const navy = '#0b1a3a';
+  const cobalt = '#1e4fd8';
+  const brightBlue = '#2860ff';
+  const redBull = '#dc1a22';
+  const yellow = '#ffd400';
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 200);
+  ctx.bezierCurveTo(180, 120, 360, 280, 560, 220);
+  ctx.bezierCurveTo(760, 160, 900, 290, 1024, 230);
+  ctx.lineTo(1024, 360);
+  ctx.bezierCurveTo(880, 420, 720, 320, 520, 380);
+  ctx.bezierCurveTo(320, 440, 180, 360, 0, 410);
+  ctx.closePath();
+
+  const blueWave = ctx.createLinearGradient(0, 180, 0, 430);
+  blueWave.addColorStop(0.0, brightBlue);
+  blueWave.addColorStop(0.5, cobalt);
+  blueWave.addColorStop(1.0, navy);
+  ctx.fillStyle = blueWave;
+  ctx.fill();
+
+  ctx.strokeStyle = '#9b0d12';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(0, 410);
+  ctx.bezierCurveTo(200, 440, 420, 360, 620, 400);
+  ctx.bezierCurveTo(820, 440, 920, 380, 1024, 410);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 246);
+  ctx.bezierCurveTo(220, 232, 420, 268, 620, 252);
+  ctx.bezierCurveTo(820, 236, 920, 260, 1024, 248);
+  ctx.lineTo(1024, 264);
+  ctx.bezierCurveTo(900, 280, 760, 252, 560, 268);
+  ctx.bezierCurveTo(360, 284, 200, 256, 0, 268);
+  ctx.closePath();
+  const redStripe = ctx.createLinearGradient(0, 240, 1024, 270);
+  redStripe.addColorStop(0.0, '#9b0d12');
+  redStripe.addColorStop(0.5, redBull);
+  redStripe.addColorStop(1.0, '#9b0d12');
+  ctx.fillStyle = redStripe;
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.moveTo(120, 170);
+  ctx.bezierCurveTo(260, 200, 380, 120, 520, 150);
+  ctx.bezierCurveTo(680, 280, 820, 170, 960, 200);
+  ctx.lineTo(960, 212);
+  ctx.bezierCurveTo(820, 192, 680, 298, 520, 168);
+  ctx.bezierCurveTo(380, 142, 260, 214, 120, 184);
+  ctx.closePath();
+  ctx.fillStyle = redBull;
+  ctx.fill();
+  ctx.restore();
+
+  const noseGrad = ctx.createLinearGradient(780, 0, 1024, 0);
+  noseGrad.addColorStop(0.0, 'rgba(255,212,0,0.0)');
+  noseGrad.addColorStop(0.25, yellow);
+  noseGrad.addColorStop(1.0, yellow);
+  ctx.fillStyle = noseGrad;
+  ctx.beginPath();
+  ctx.moveTo(780, 180);
+  ctx.lineTo(1024, 160);
+  ctx.lineTo(1024, 360);
+  ctx.lineTo(780, 340);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = yellow;
+  ctx.fillRect(960, 200, 80, 120);
+  ctx.fillStyle = '#b89000';
+  ctx.fillRect(960, 320, 80, 6);
+  ctx.fillRect(960, 200, 80, 6);
+}
+
+function drawMercedesPattern(ctx, primary, secondary, accent) {
+  // Silver Arrows: cyan pinstripes with black accents
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(0, 180, 1024, 6);
+  ctx.fillRect(0, 332, 1024, 6);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 186, 1024, 12);
+  ctx.fillRect(0, 314, 1024, 12);
+
+  // Star pattern on engine cover
+  ctx.fillStyle = '#00f0ff';
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const x = 512 + Math.cos(angle) * 80;
+    const y = 256 + Math.sin(angle) * 80;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x + 2, y + 2);
+    ctx.lineTo(x - 7, y + 2);
+    ctx.lineTo(x + 5, y - 3);
+    ctx.lineTo(x - 5, y - 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawMcLarenPattern(ctx, primary, secondary, accent) {
+  // Papaya with cyan accents
+  ctx.fillStyle = '#00d2be';
+  ctx.beginPath();
+  ctx.moveTo(0, 200);
+  ctx.lineTo(300, 200);
+  ctx.lineTo(200, 300);
+  ctx.lineTo(0, 300);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 190, 1024, 10);
+  ctx.fillRect(0, 320, 1024, 10);
+
+  // Speedmark logo
+  ctx.fillStyle = '#00d2be';
+  ctx.font = '900 80px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('McLAREN', 512, 260);
+}
+
+function drawAstonMartinPattern(ctx, primary, secondary, accent) {
+  // British Racing Green with lime accents
+  ctx.fillStyle = '#cedc00';
+  ctx.fillRect(0, 180, 1024, 8);
+  ctx.fillRect(0, 332, 1024, 8);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 188, 1024, 6);
+  ctx.fillRect(0, 326, 1024, 6);
+
+  // Union jack accent on nose
+  ctx.fillStyle = '#00594f';
+  ctx.fillRect(900, 180, 124, 100);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(910, 190, 104, 80);
+}
+
+function drawAlpinePattern(ctx, primary, secondary, accent) {
+  // French Blue with pink accents
+  ctx.fillStyle = '#fd4bc7';
+  ctx.beginPath();
+  ctx.moveTo(0, 210);
+  ctx.lineTo(1024, 170);
+  ctx.lineTo(1024, 190);
+  ctx.lineTo(0, 230);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 200, 1024, 10);
+  ctx.fillRect(0, 300, 1024, 10);
+}
+
+function drawWilliamsPattern(ctx, primary, secondary, accent) {
+  // Navy with cyan accents
+  ctx.fillStyle = '#00d2be';
+  ctx.fillRect(0, 180, 1024, 6);
+  ctx.fillRect(0, 332, 1024, 6);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 186, 1024, 14);
+  ctx.fillRect(0, 320, 1024, 14);
+}
+
+function drawSauberPattern(ctx, primary, secondary, accent) {
+  // Neon Green with black
+  ctx.fillStyle = '#00e700';
+  ctx.fillRect(0, 180, 1024, 8);
+  ctx.fillRect(0, 332, 1024, 8);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 188, 1024, 4);
+  ctx.fillRect(0, 328, 1024, 4);
+}
+
+function drawHaasPattern(ctx, primary, secondary, accent) {
+  // Red with white/black pinstripes
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 180, 1024, 6);
+  ctx.fillRect(0, 332, 1024, 6);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 186, 1024, 4);
+  ctx.fillRect(0, 328, 1024, 4);
+}
+
+function drawRBPattern(ctx, primary, secondary, accent) {
+  // Dark blue with red/white
+  ctx.fillStyle = '#d81e05';
+  ctx.fillRect(0, 180, 1024, 6);
+  ctx.fillRect(0, 332, 1024, 6);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 186, 1024, 3);
+  ctx.fillRect(0, 329, 1024, 3);
+}
+
+function drawGenericPattern(ctx, primary, secondary, accent) {
+  ctx.fillStyle = secondary;
+  ctx.beginPath();
+  ctx.moveTo(0, 220);
+  ctx.lineTo(1024, 180);
+  ctx.lineTo(1024, 332);
+  ctx.lineTo(0, 292);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 210, 1024, 10);
+  ctx.fillRect(0, 292, 1024, 10);
+}
+
+function drawNumberPod(ctx, carNumber, secondary, accent) {
+  ctx.fillStyle = secondary;
+  ctx.beginPath();
+  ctx.arc(880, 256, 42, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+
+  ctx.fillStyle = '#0a0a0a';
+  ctx.font = 'bold 50px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(carNumber.toString(), 880, 258);
+}
+
+function drawSponsorDecals(ctx, teamId, secondary, accent) {
+  // PIRELLI
+  ctx.fillStyle = '#ffd000';
+  ctx.font = '900 34px sans-serif';
+  ctx.fillText('IRELLI', 560, 140);
+  ctx.fillText('IRELLI', 560, 372);
+  ctx.fillStyle = '#e10600';
+  ctx.fillText('P', 485, 140);
+  ctx.fillText('P', 485, 372);
+
+  // Mobil 1
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('Mobil 1', 340, 140);
+  ctx.fillText('Mobil 1', 340, 372);
+
+  // Engine cover branding
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.font = '900 italic 38px sans-serif';
+  ctx.fillText('GRAND PRIX', 200, 256);
+}
+
+/**
+ * Loads and caches a .glb model from the given URL.
+ * Returns a Promise<THREE.Group> with the loaded scene cloned.
+ * If the file is missing or fails to load, the promise rejects.
+ */
+async function loadGltfModelAsync(url) {
+  if (_gltfCache.has(url)) {
+    return _gltfCache.get(url).clone(true);
+  }
+  const loader = await import('three/addons/loaders/GLTFLoader.js');
+  const GLTFLoader = loader.GLTFLoader;
+  const gltfLoader = new GLTFLoader();
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      url,
+      (gltf) => {
+        const root = gltf.scene || gltf.scenes[0];
+        _gltfCache.set(url, root);
+        resolve(root.clone(true));
+      },
+      undefined,
+      (err) => reject(err)
+    );
+  });
+}
 
 /**
  * Procedural Composite 3D Formula 1 Car
  * Creates an aerodynamic F1 car with monocoque chassis, halo, wings,
  * steerable wheels, rotating tires, brake calipers, and dynamic smoke particles.
+ * If the team is Red Bull and assets/models/redbull.glb exists, the body is
+ * replaced by the GLB (wings, halo, sidepods, nose, etc.) while wheels,
+ * physics, AI, steering and multiplayer all remain driven by the original code.
  */
 export class F1Car {
   constructor(scene, isPlayer = true, optionsOrColor = 0xe10600) {
@@ -38,6 +632,15 @@ export class F1Car {
     this.wheelsGroup = new THREE.Group();
     this.group.add(this.wheelsGroup);
 
+    // Wing meshes for damage system
+    this.frontWingMesh = null;
+    this.leftFrontEndplate = null;
+    this.rightFrontEndplate = null;
+    this.rearWingMesh = null;
+    this.leftRearEndplate = null;
+    this.rightRearEndplate = null;
+    this.diffuserMesh = null;
+
     // Wheel nodes
     this.wheelMeshes = {
       fl: null,
@@ -53,14 +656,30 @@ export class F1Car {
 
     this.rainLight = null;
     this.smokeParticles = [];
+    this.sparkParticles = [];
+    this._proceduralBodyMeshes = [];
+    this._glbRoot = null;
+    this._glbSwapRequestId = 0;
 
     this.wheelRotation = 0;
     this.currentSteerAngle = 0;
     this.currentRoll = 0;
     this.currentPitch = 0;
 
+    // Phase 6: Damage & wear state
+    this.damage = {
+      frontWingDamage: 0,        // 0 = intact, 1 = fully detached
+      rearWingDamage: 0,
+      steeringDragMultiplier: 1.0,
+      topSpeedMultiplier: 1.0,
+      lastImpactTime: 0
+    };
+    this.tireCompound = this.options.tireCompound || 'MEDIUM';
+    this.teamId = this.options.teamId || null;
+
     this.buildCar();
     this.initSmokeParticles();
+    this.initSparkParticles();
     this.scene.add(this.group);
   }
 
@@ -79,8 +698,10 @@ export class F1Car {
     if (teamOptions.name || teamOptions.teamName) this.teamName = teamOptions.name || teamOptions.teamName;
     if (teamOptions.driverName) this.driverName = teamOptions.driverName;
     if (teamOptions.haloColor !== undefined) this.haloColor = teamOptions.haloColor;
+    if (teamOptions.teamId) this.teamId = teamOptions.teamId;
 
     // Safely remove and dispose all previous visual body meshes
+    this._clearGlbBody();
     while (this.visualBody.children.length > 0) {
       const child = this.visualBody.children[0];
       this.visualBody.remove(child);
@@ -91,46 +712,66 @@ export class F1Car {
       }
     }
 
+    // Increment request ID to invalidate any pending GLB load from previous livery
+    this._glbSwapRequestId++;
+
     this.buildVisualBody();
   }
 
   buildVisualBody() {
-    // 1. Textures from TextureFactory
-    const carbonTex = TextureFactory.createCarbonFiberTexture();
+    // 1. Get team data for procedural livery
+    const teamData = this.teamId ? getTeamById(this.teamId) : null;
     const primaryHex = '#' + this.primaryColor.toString(16).padStart(6, '0');
     const secondaryHex = this.secondaryHex;
     const accentHex = this.accentHex;
     const carNumber = this.carNumber;
-    const liveryTex = TextureFactory.createCarLiveryTexture(primaryHex, secondaryHex, accentHex, carNumber);
 
-    // 2. High-Gloss Lacquer Body Material (Crazy Grand Prix style)
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: this.primaryColor,
-      map: liveryTex,
-      roughness: 0.20,
-      metalness: 0.75,
-      envMapIntensity: 1.2
-    });
+    // Red Bull uses a dedicated flowing navy/red/yellow livery generator
+    const isRedBull = (this.teamName && this.teamName.toLowerCase().includes('red bull')) ||
+                      (primaryHex === '#03102c' && secondaryHex && secondaryHex.toLowerCase() === '#fcd700');
 
-    const carbonMat = new THREE.MeshStandardMaterial({
-      map: carbonTex,
-      color: 0x222222,
-      roughness: 0.45,
-      metalness: 0.50
-    });
+    this._isRedBull = isRedBull;
+    this._proceduralBodyMeshes = [];
 
-    const accentMat = new THREE.MeshStandardMaterial({
+    // Generate procedural livery texture using new system
+    let liveryTex;
+    if (isRedBull) {
+      liveryTex = TextureFactory.createRedBullLiveryTexture(carNumber);
+    } else if (teamData) {
+      liveryTex = generateProceduralLivery(teamData, carNumber);
+    } else {
+      liveryTex = TextureFactory.createCarLiveryTexture(primaryHex, secondaryHex, accentHex, carNumber);
+    }
+
+    // 2. PBR MATERIALS
+    // Chassis: Clearcoat carbon-fiber finish
+    const bodyMat = createClearcoatCarbonMaterial(this.primaryColor, liveryTex);
+
+    // Aero elements: Matte checkered carbon-fiber
+    const matteCarbonMat = createMatteCarbonMaterial();
+
+    // Accent color material (for endplates, DRS flap)
+    const accentMat = new THREE.MeshPhysicalMaterial({
       color: this.accentColor,
-      roughness: 0.25,
-      metalness: 0.65
+      roughness: 0.20,
+      metalness: 0.85,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.15,
+      envMapIntensity: 1.0,
     });
 
-    const haloMat = new THREE.MeshStandardMaterial({
-      map: carbonTex,
+    // Halo material
+    const haloMat = new THREE.MeshPhysicalMaterial({
+      map: TextureFactory.createCarbonFiberTexture(256, 256),
       color: this.haloColor !== undefined ? this.haloColor : 0x2a2a2a,
       roughness: 0.35,
-      metalness: 0.85
+      metalness: 0.85,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.2,
     });
+
+    // Intake matte black
+    const intakeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
 
     // 1. NOSECONE & MAIN CHASSIS
     // Nosecone (tapered wedge)
@@ -144,7 +785,7 @@ export class F1Car {
 
     // Front Nose Tip (camera pod)
     const noseTipGeo = new THREE.BoxGeometry(0.2, 0.1, 0.3);
-    const noseTipMesh = new THREE.Mesh(noseTipGeo, carbonMat);
+    const noseTipMesh = new THREE.Mesh(noseTipGeo, matteCarbonMat);
     noseTipMesh.position.set(0, 0.22, 2.65);
     this.visualBody.add(noseTipMesh);
 
@@ -171,7 +812,6 @@ export class F1Car {
 
     // Sidepod air intakes (black openings)
     const intakeGeo = new THREE.BoxGeometry(0.32, 0.24, 0.08);
-    const intakeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
     const leftIntake = new THREE.Mesh(intakeGeo, intakeMat);
     leftIntake.position.set(-0.52, 0.28, 0.91);
     this.visualBody.add(leftIntake);
@@ -204,22 +844,24 @@ export class F1Car {
     const extrudeSettings = { depth: 0.04, bevelEnabled: false };
     const finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
     finGeo.rotateY(Math.PI / 2);
-    const finMesh = new THREE.Mesh(finGeo, carbonMat);
+    const finMesh = new THREE.Mesh(finGeo, matteCarbonMat);
     finMesh.position.set(0.02, 0.58, -1.35);
     this.visualBody.add(finMesh);
 
     // 2. COCKPIT & DRIVER
     // Cockpit opening cutout
-    const cockpitCutout = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.75), carbonMat);
+    const cockpitCutout = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.75), matteCarbonMat);
     cockpitCutout.position.set(0, 0.48, 0.45);
     this.visualBody.add(cockpitCutout);
 
     // Driver Helmet with team matching accent color
     const helmetGeo = new THREE.SphereGeometry(0.16, 16, 16);
-    const helmetMat = new THREE.MeshStandardMaterial({
+    const helmetMat = new THREE.MeshPhysicalMaterial({
       color: this.accentColor || (this.isPlayer ? 0xffe600 : 0x00f0ff),
       roughness: 0.2,
-      metalness: 0.3
+      metalness: 0.3,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
     });
     const helmet = new THREE.Mesh(helmetGeo, helmetMat);
     helmet.position.set(0, 0.52, 0.45);
@@ -227,7 +869,7 @@ export class F1Car {
 
     // Helmet Visor
     const visorGeo = new THREE.BoxGeometry(0.18, 0.06, 0.12);
-    const visorMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 });
+    const visorMat = new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9, clearcoat: 1.0 });
     const visor = new THREE.Mesh(visorGeo, visorMat);
     visor.position.set(0, 0.53, 0.56);
     this.visualBody.add(visor);
@@ -250,30 +892,36 @@ export class F1Car {
     haloPillar.position.set(0, 0.55, 0.72);
     this.visualBody.add(haloPillar);
 
-    // 3. AERODYNAMIC WINGS
-    // Front Wing Main Plane
+    // 3. AERODYNAMIC WINGS (with damage references)
+    // Front Wing Main Plane - matte carbon
     const frontWingGeo = new THREE.BoxGeometry(2.05, 0.04, 0.42);
-    const frontWing = new THREE.Mesh(frontWingGeo, carbonMat);
-    frontWing.position.set(0, 0.12, 2.35);
-    frontWing.castShadow = true;
-    this.visualBody.add(frontWing);
+    this.frontWingMesh = new THREE.Mesh(frontWingGeo, matteCarbonMat);
+    this.frontWingMesh.position.set(0, 0.12, 2.35);
+    this.frontWingMesh.castShadow = true;
+    this.visualBody.add(this.frontWingMesh);
 
     // Front Wing Endplates
     const frontEndplateGeo = new THREE.BoxGeometry(0.04, 0.22, 0.52);
-    const leftFrontEndplate = new THREE.Mesh(frontEndplateGeo, accentMat);
-    leftFrontEndplate.position.set(-1.02, 0.18, 2.35);
-    this.visualBody.add(leftFrontEndplate);
+    this.leftFrontEndplate = new THREE.Mesh(frontEndplateGeo, accentMat);
+    this.leftFrontEndplate.position.set(-1.02, 0.18, 2.35);
+    this.leftFrontEndplate.userData.originalPosition = this.leftFrontEndplate.position.clone();
+    this.leftFrontEndplate.userData.isEndplate = true;
+    this.leftFrontEndplate.userData.side = 'left';
+    this.visualBody.add(this.leftFrontEndplate);
 
-    const rightFrontEndplate = new THREE.Mesh(frontEndplateGeo, accentMat);
-    rightFrontEndplate.position.set(1.02, 0.18, 2.35);
-    this.visualBody.add(rightFrontEndplate);
+    this.rightFrontEndplate = new THREE.Mesh(frontEndplateGeo, accentMat);
+    this.rightFrontEndplate.position.set(1.02, 0.18, 2.35);
+    this.rightFrontEndplate.userData.originalPosition = this.rightFrontEndplate.position.clone();
+    this.rightFrontEndplate.userData.isEndplate = true;
+    this.rightFrontEndplate.userData.side = 'right';
+    this.visualBody.add(this.rightFrontEndplate);
 
-    // Rear Wing Main Plane
+    // Rear Wing Main Plane - matte carbon
     const rearWingGeo = new THREE.BoxGeometry(1.4, 0.04, 0.32);
-    const rearWing = new THREE.Mesh(rearWingGeo, carbonMat);
-    rearWing.position.set(0, 0.85, -1.8);
-    rearWing.castShadow = true;
-    this.visualBody.add(rearWing);
+    this.rearWingMesh = new THREE.Mesh(rearWingGeo, matteCarbonMat);
+    this.rearWingMesh.position.set(0, 0.85, -1.8);
+    this.rearWingMesh.castShadow = true;
+    this.visualBody.add(this.rearWingMesh);
 
     // Rear Wing Upper DRS Flap
     const drsFlapGeo = new THREE.BoxGeometry(1.4, 0.03, 0.22);
@@ -284,33 +932,39 @@ export class F1Car {
 
     // Rear Wing Endplates
     const rearEndplateGeo = new THREE.BoxGeometry(0.04, 0.45, 0.55);
-    const leftRearEndplate = new THREE.Mesh(rearEndplateGeo, accentMat);
-    leftRearEndplate.position.set(-0.7, 0.82, -1.8);
-    leftRearEndplate.castShadow = true;
-    this.visualBody.add(leftRearEndplate);
+    this.leftRearEndplate = new THREE.Mesh(rearEndplateGeo, accentMat);
+    this.leftRearEndplate.position.set(-0.7, 0.82, -1.8);
+    this.leftRearEndplate.castShadow = true;
+    this.leftRearEndplate.userData.originalPosition = this.leftRearEndplate.position.clone();
+    this.leftRearEndplate.userData.isEndplate = true;
+    this.leftRearEndplate.userData.side = 'left';
+    this.visualBody.add(this.leftRearEndplate);
 
-    const rightRearEndplate = new THREE.Mesh(rearEndplateGeo, accentMat);
-    rightRearEndplate.position.set(0.7, 0.82, -1.8);
-    rightRearEndplate.castShadow = true;
-    this.visualBody.add(rightRearEndplate);
+    this.rightRearEndplate = new THREE.Mesh(rearEndplateGeo, accentMat);
+    this.rightRearEndplate.position.set(0.7, 0.82, -1.8);
+    this.rightRearEndplate.castShadow = true;
+    this.rightRearEndplate.userData.originalPosition = this.rightRearEndplate.position.clone();
+    this.rightRearEndplate.userData.isEndplate = true;
+    this.rightRearEndplate.userData.side = 'right';
+    this.visualBody.add(this.rightRearEndplate);
 
     // Rear Wing Support Pillars
     const rearPillarGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6);
-    const leftPillar = new THREE.Mesh(rearPillarGeo, carbonMat);
+    const leftPillar = new THREE.Mesh(rearPillarGeo, matteCarbonMat);
     leftPillar.position.set(-0.2, 0.55, -1.75);
     leftPillar.rotation.x = -0.2;
     this.visualBody.add(leftPillar);
 
-    const rightPillar = new THREE.Mesh(rearPillarGeo, carbonMat);
+    const rightPillar = new THREE.Mesh(rearPillarGeo, matteCarbonMat);
     rightPillar.position.set(0.2, 0.55, -1.75);
     rightPillar.rotation.x = -0.2;
     this.visualBody.add(rightPillar);
 
-    // Rear Diffuser & Rain Safety Light
+    // Rear Diffuser - matte carbon
     const diffuserGeo = new THREE.BoxGeometry(1.1, 0.14, 0.38);
-    const diffuser = new THREE.Mesh(diffuserGeo, carbonMat);
-    diffuser.position.set(0, 0.16, -1.7);
-    this.visualBody.add(diffuser);
+    this.diffuserMesh = new THREE.Mesh(diffuserGeo, matteCarbonMat);
+    this.diffuserMesh.position.set(0, 0.16, -1.7);
+    this.visualBody.add(this.diffuserMesh);
 
     // Blinking Rain LED
     const rainLightGeo = new THREE.BoxGeometry(0.12, 0.06, 0.04);
@@ -318,6 +972,90 @@ export class F1Car {
     this.rainLight = new THREE.Mesh(rainLightGeo, rainLightMat);
     this.rainLight.position.set(0, 0.16, -1.9);
     this.visualBody.add(this.rainLight);
+
+    if (this._isRedBull) {
+      this._scheduleGlbBodySwap();
+    }
+  }
+
+  _clearGlbBody() {
+    if (this._glbRoot) {
+      if (this._glbRoot.parent) this._glbRoot.parent.remove(this._glbRoot);
+      this._glbRoot.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+          else obj.material.dispose();
+        }
+      });
+      this._glbRoot = null;
+    }
+  }
+
+  _scheduleGlbBodySwap() {
+    const requestId = ++this._glbSwapRequestId;
+    loadGltfModelAsync(RED_BULL_GLB_PATH).then((gltfRoot) => {
+      if (requestId !== this._glbSwapRequestId) {
+        gltfRoot.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        return;
+      }
+      if (!this._isRedBull) {
+        gltfRoot.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        return;
+      }
+
+      gltfRoot.traverse((obj) => {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          if (obj.name && HIDE_GLB_MESH_PREFIXES.some((p) => obj.name.toLowerCase().startsWith(p))) {
+            obj.visible = false;
+          }
+        }
+      });
+
+      gltfRoot.rotation.y = BODY_ROTATION_Y;
+      gltfRoot.position.y = BODY_OFFSET_Y;
+
+      if (AUTO_SCALE_TO_PHYSICS) {
+        const box = new THREE.Box3().setFromObject(gltfRoot);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const longest = Math.max(size.x, size.y, size.z) || 1;
+        const targetAxis = Math.max(BODY_LENGTH_TARGET, size.x, size.y);
+        gltfRoot.scale.setScalar(targetAxis / longest);
+      } else {
+        gltfRoot.scale.setScalar(BODY_SCALE);
+      }
+
+      this._clearGlbBody();
+      this._glbRoot = gltfRoot;
+      this.visualBody.add(gltfRoot);
+
+      this.visualBody.traverse((obj) => {
+        if (obj.isMesh && obj !== this.rainLight) {
+          obj.visible = false;
+        }
+      });
+      gltfRoot.traverse((obj) => {
+        if (obj.isMesh) obj.visible = true;
+      });
+    }).catch((err) => {
+      if (requestId !== this._glbSwapRequestId) return;
+      console.warn('[F1Car] Red Bull GLB not loaded, using procedural body:', err && err.message ? err.message : err);
+    });
   }
 
   buildWheels() {
@@ -493,6 +1231,138 @@ export class F1Car {
     }
   }
 
+  initSparkParticles() {
+    // Spark particle pool for underfloor bottoming out
+    const particleCount = 80;
+    const pGeo = new THREE.PlaneGeometry(0.08, 0.3);
+    const colors = [0xffcc00, 0xff8800, 0xff4400, 0xffffaa];
+
+    for (let i = 0; i < particleCount; i++) {
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const pMat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 1.0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(pGeo, pMat);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.sparkParticles.push({
+        mesh,
+        life: 0,
+        maxLife: 0.4 + Math.random() * 0.3,
+        vel: new THREE.Vector3(),
+        gravity: -18 - Math.random() * 8,
+      });
+    }
+  }
+
+  emitSparks(worldPos, speedMps, count = 5) {
+    if (speedMps < 25) return;
+    for (let i = 0; i < count; i++) {
+      const p = this.sparkParticles.find(sp => sp.life <= 0);
+      if (!p) continue;
+
+      p.life = 0.001;
+      p.maxLife = 0.3 + Math.random() * 0.25;
+      p.mesh.position.copy(worldPos).add(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.4,
+        0.05,
+        (Math.random() - 0.5) * 0.2
+      ));
+      p.mesh.rotation.z = Math.random() * Math.PI * 2;
+      p.mesh.scale.setScalar(0.6 + Math.random() * 0.6);
+      p.mesh.material.opacity = 1.0;
+      p.mesh.visible = true;
+      // Sparks shoot backwards and slightly up with gravity
+      const backwardSpeed = speedMps * 0.3 + 5 + Math.random() * 8;
+      p.vel.set(
+        (Math.random() - 0.5) * 4,
+        3 + Math.random() * 5,
+        backwardSpeed
+      );
+      p.gravity = -18 - Math.random() * 10;
+    }
+  }
+
+  /**
+   * Apply visual damage to front wing endplates
+   * @param {number} severity - 0 to 1, where 1 = fully detached
+   */
+  applyFrontWingDamage(severity) {
+    this.damage.frontWingDamage = Math.min(1, this.damage.frontWingDamage + severity);
+    const d = this.damage.frontWingDamage;
+
+    if (this.leftFrontEndplate && this.rightFrontEndplate) {
+      // Tilt endplates upward and outward based on damage
+      const tiltAngle = d * Math.PI * 0.35; // up to ~63 degrees
+      const outwardShift = d * 0.4;
+      const upwardShift = d * 0.3;
+
+      this.leftFrontEndplate.rotation.x = tiltAngle;
+      this.leftFrontEndplate.position.z = this.leftFrontEndplate.userData.originalPosition.z + outwardShift;
+      this.leftFrontEndplate.position.y = this.leftFrontEndplate.userData.originalPosition.y + upwardShift;
+
+      this.rightFrontEndplate.rotation.x = -tiltAngle;
+      this.rightFrontEndplate.position.z = this.rightFrontEndplate.userData.originalPosition.z + outwardShift;
+      this.rightFrontEndplate.position.y = this.rightRearEndplate.userData.originalPosition.y + upwardShift;
+    }
+
+    // Increase steering drag and reduce top speed
+    this.damage.steeringDragMultiplier = 1.0 + this.damage.frontWingDamage * 0.15;
+    this.damage.topSpeedMultiplier = 1.0 - this.damage.frontWingDamage * 0.10;
+  }
+
+  /**
+   * Apply visual damage to rear wing
+   * @param {number} severity - 0 to 1
+   */
+  applyRearWingDamage(severity) {
+    this.damage.rearWingDamage = Math.min(1, this.damage.rearWingDamage + severity);
+    const d = this.damage.rearWingDamage;
+
+    if (this.leftRearEndplate && this.rightRearEndplate) {
+      const tiltAngle = d * Math.PI * 0.25;
+      const backwardShift = d * 0.3;
+
+      this.leftRearEndplate.rotation.x = -tiltAngle;
+      this.leftRearEndplate.position.z = this.leftRearEndplate.userData.originalPosition.z - backwardShift;
+
+      this.rightRearEndplate.rotation.x = tiltAngle;
+      this.rightRearEndplate.position.z = this.rightRearEndplate.userData.originalPosition.z - backwardShift;
+    }
+  }
+
+  /**
+   * Repair damage (called when crossing repair checkpoint or completing lap)
+   */
+  repairDamage() {
+    this.damage.frontWingDamage = 0;
+    this.damage.rearWingDamage = 0;
+    this.damage.steeringDragMultiplier = 1.0;
+    this.damage.topSpeedMultiplier = 1.0;
+
+    // Reset endplate positions
+    if (this.leftFrontEndplate) {
+      this.leftFrontEndplate.rotation.x = 0;
+      this.leftFrontEndplate.position.copy(this.leftFrontEndplate.userData.originalPosition);
+    }
+    if (this.rightFrontEndplate) {
+      this.rightFrontEndplate.rotation.x = 0;
+      this.rightFrontEndplate.position.copy(this.rightFrontEndplate.userData.originalPosition);
+    }
+    if (this.leftRearEndplate) {
+      this.leftRearEndplate.rotation.x = 0;
+      this.leftRearEndplate.position.copy(this.leftRearEndplate.userData.originalPosition);
+    }
+    if (this.rightRearEndplate) {
+      this.rightRearEndplate.rotation.x = 0;
+      this.rightRearEndplate.position.copy(this.rightRearEndplate.userData.originalPosition);
+    }
+  }
+
   emitSmoke(wheelPos, lateralSlip) {
     if (lateralSlip < 0.25) return;
     const p = this.smokeParticles.find(sp => sp.life <= 0);
@@ -512,9 +1382,9 @@ export class F1Car {
   }
 
   /**
-   * Update visual dynamics (steering, wheel spin, body roll/pitch, particles)
+   * Update visual dynamics (steering, wheel spin, body roll/pitch, particles, damage)
    */
-  update(dt, speedMps, steerInput, lateralSlip, accelInput, brakeInput) {
+  update(dt, speedMps, steerInput, lateralSlip, accelInput, brakeInput, isBottomingOut = false) {
     // 1. Wheel spin rotation based on distance travelled
     const wheelCircumference = 2 * Math.PI * 0.34;
     const dAngle = (speedMps * dt) / wheelCircumference;
@@ -558,6 +1428,19 @@ export class F1Car {
       this.emitSmoke(rrWorldPos, lateralSlip);
     }
 
+    // 7. Emit sparks when bottoming out at high speed or clipping kerbs
+    if (isBottomingOut && speedMps > 30) {
+      const diffuserPos = new THREE.Vector3();
+      if (this.diffuserMesh) {
+        this.diffuserMesh.getWorldPosition(diffuserPos);
+      } else {
+        // Fallback: approximate diffuser position
+        diffuserPos.set(0, 0.16, -1.7).applyMatrix4(this.visualBody.matrixWorld);
+      }
+      const sparkCount = Math.floor(3 + (speedMps / 80) * 8);
+      this.emitSparks(diffuserPos, speedMps, sparkCount);
+    }
+
     // Update smoke particles
     for (const sp of this.smokeParticles) {
       if (sp.life > 0) {
@@ -573,6 +1456,24 @@ export class F1Car {
         }
       }
     }
+
+    // Update spark particles
+    for (const sp of this.sparkParticles) {
+      if (sp.life > 0) {
+        sp.life += dt;
+        if (sp.life >= sp.maxLife) {
+          sp.life = 0;
+          sp.mesh.visible = false;
+        } else {
+          const progress = sp.life / sp.maxLife;
+          sp.vel.y += sp.gravity * dt;
+          sp.mesh.position.addScaledVector(sp.vel, dt);
+          sp.mesh.rotation.z += dt * 20;
+          sp.mesh.material.opacity = 1.0 - progress;
+          sp.mesh.scale.multiplyScalar(0.98);
+        }
+      }
+    }
   }
 
   setPositionAndRotation(pos, quat) {
@@ -581,9 +1482,78 @@ export class F1Car {
   }
 
   dispose() {
-    this.scene.remove(this.group);
-    for (const sp of this.smokeParticles) {
-      this.scene.remove(sp.mesh);
+    this._clearGlbBody();
+
+    // Dispose visual body meshes, geometries, materials
+    this.visualBody.traverse((child) => {
+      if (child.isMesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+      }
+    });
+
+    // Dispose wheels group meshes, geometries, materials
+    this.wheelsGroup.traverse((child) => {
+      if (child.isMesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+      }
+    });
+
+    // Dispose front wheel holders
+    if (this.frontWheelHolders.fl) {
+      this.frontWheelHolders.fl.traverse((child) => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        }
+      });
     }
+    if (this.frontWheelHolders.fr) {
+      this.frontWheelHolders.fr.traverse((child) => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        }
+      });
+    }
+
+    // Dispose smoke particle meshes and materials
+    for (const sp of this.smokeParticles) {
+      if (sp.mesh) {
+        this.scene.remove(sp.mesh);
+        if (sp.mesh.geometry) sp.mesh.geometry.dispose();
+        if (sp.mesh.material) {
+          if (Array.isArray(sp.mesh.material)) sp.mesh.material.forEach(m => m.dispose());
+          else sp.mesh.material.dispose();
+        }
+      }
+    }
+
+    // Dispose spark particle meshes and materials
+    for (const sp of this.sparkParticles) {
+      if (sp.mesh) {
+        this.scene.remove(sp.mesh);
+        if (sp.mesh.geometry) sp.mesh.geometry.dispose();
+        if (sp.mesh.material) {
+          if (Array.isArray(sp.mesh.material)) sp.mesh.material.forEach(m => m.dispose());
+          else sp.mesh.material.dispose();
+        }
+      }
+    }
+
+    this.scene.remove(this.group);
   }
 }

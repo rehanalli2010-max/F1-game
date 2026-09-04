@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { F1Car } from './car.js?v=28';
+import { F1Car } from './car.js?v=29';
 
 /**
  * 10-Driver Authentic Grand Prix Roster
@@ -219,7 +219,8 @@ export class AICar {
       accentColor: this.info.accentColor,
       carNumber: this.info.number,
       driverName: this.info.name,
-      teamName: this.info.team
+      teamName: this.info.team,
+      teamId: this.info.teamId
     });
     this.visualCar.group.visible = false;
 
@@ -297,7 +298,7 @@ export class AICar {
   /**
    * Main AI Update Tick
    */
-  update(dt, waypoints, difficulty, allCars = [], playerCarPos = null, playerCarVel = null, targetLaps = 3, currentRaceTime = null) {
+  update(dt, waypoints, difficulty, allCars = [], playerCarPos = null, playerCarVel = null, targetLaps = 3, currentRaceTime = null, audioManager = null) {
     if (!this.active || !this.track) return;
 
     // Remote Guest Vehicle: Controlled directly via streaming player inputs from WebRTC
@@ -365,9 +366,10 @@ export class AICar {
     const toPlayer = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
     const distToPlayer = toPlayer.length();
     const forwardVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.visualCar.group.quaternion);
-    const rightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(this.visualCar.group.quaternion);
+    // Use track normal for lateral calculations (consistent reference frame)
+    const trackNormal = targetWp.normal.clone();
     const fwdDistToPlayer = toPlayer.dot(forwardVec);
-    const latDistToPlayer = toPlayer.dot(rightVec);
+    const latDistToPlayer = toPlayer.dot(trackNormal);
 
     let emergencyBrake = 0;
 
@@ -382,7 +384,7 @@ export class AICar {
       const dx = oPos.x - pos.x;
       const dz = oPos.z - pos.z;
       const dFwd = dx * forwardVec.x + dz * forwardVec.z;
-      const dLat = dx * rightVec.x + dz * rightVec.z;
+      const dLat = dx * trackNormal.x + dz * trackNormal.z;
 
       // Detect if someone is directly ahead in our corridor
       if (dFwd > 1.2 && dFwd < config.overtakeCommitDistance && Math.abs(dLat) < 3.4) {
@@ -463,7 +465,7 @@ export class AICar {
 
       // Emergency braking: ONLY if an obstacle is immediately ahead in the SAME narrow corridor (< 1.8m)
       const dFwd = dx * forwardVec.x + dz * forwardVec.z;
-      const dLat = dx * rightVec.x + dz * rightVec.z;
+      const dLat = dx * trackNormal.x + dz * trackNormal.z;
 
       if (dFwd > 0.5 && dFwd < 7.5 && Math.abs(dLat) < 1.8) {
         obstacleAhead = true;
@@ -735,7 +737,8 @@ export class AIGridManager {
           accentColor: assigned.accentColor,
           carNumber: assigned.number,
           teamName: assigned.team,
-          driverName: assigned.name
+          driverName: assigned.name,
+          teamId: assigned.teamId
         });
       });
     }
@@ -751,7 +754,8 @@ export class AIGridManager {
         carNumber: teamData.driverNumber,
         driverNumber: teamData.driverNumber,
         teamName: teamData.fullName || teamData.name,
-        driverName: 'PLAYER'
+        driverName: 'PLAYER',
+        teamId: teamData.id
       });
     }
   }
@@ -904,7 +908,8 @@ export class AIGridManager {
       }
     } else if (sessionMode === 'RACE') {
       // Re-enable collisions between all cars
-      if (this.isMultiplayer) {
+      // Always disable ghost collision regardless of multiplayer state to ensure clean state
+      if (this.aiCars && this.aiCars.length > 0 && this.playerVehicle) {
         this.physics.setGhostCollision(this.playerVehicle, this.aiCars[0].vehicle, false);
       }
       this.spawnRaceGrid();
@@ -1040,7 +1045,7 @@ export class AIGridManager {
   /**
    * Main AI Grid Update
    */
-  update(dt, playerPos, playerVel, playerLap, currentRaceTime = null, targetLaps = 3) {
+  update(dt, playerPos, playerVel, playerLap, currentRaceTime = null, targetLaps = 3, audioManager = null) {
     // Collect all active cars for collision avoidance
     const allCars = [];
     for (const ai of this.aiCars) {
@@ -1056,27 +1061,12 @@ export class AIGridManager {
     // Update each AI car
     for (const ai of this.aiCars) {
       if (ai.active) {
-        ai.update(dt, this.waypoints, this.difficulty, allCars, playerPos, playerVel, targetLaps, currentRaceTime);
+        ai.update(dt, this.waypoints, this.difficulty, allCars, playerPos, playerVel, targetLaps, currentRaceTime, audioManager);
       }
     }
 
     // Update live 10-car position tracker
     this.updateLeaderboard(playerPos, playerLap);
-  }
-
-  /**
-   * Check if any AI car crossed the finish line on the final lap
-   */
-  getRaceWinner(targetLaps = 3) {
-    const trackLen = this.track.trackLength || 1850;
-    const finishDist = targetLaps * trackLen;
-
-    for (const ai of this.aiCars) {
-      if (ai.active && ai.raceDistance >= finishDist) {
-        return ai.info;
-      }
-    }
-    return null;
   }
 
   /**

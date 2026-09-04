@@ -54,6 +54,230 @@ export class TextureFactory {
   }
 
   /**
+   * Generates a Red Bull Racing-style body livery with dark navy base,
+   * flowing red and cobalt-blue graphic waves, and yellow nose/accent details
+   * modelled on the reference Oracle Red Bull Racing livery.
+   */
+  static createRedBullLiveryTexture(carNumber = '1') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Brand palette
+    const navy = '#0b1a3a';
+    const deepNavy = '#06122a';
+    const cobalt = '#1e4fd8';
+    const brightBlue = '#2860ff';
+    const redBull = '#dc1a22';
+    const darkRed = '#9b0d12';
+    const yellow = '#ffd400';
+    const carbonBlack = '#0a0c12';
+
+    // 1. Glossy carbon fiber navy base coat
+    const baseGrad = ctx.createLinearGradient(0, 0, 0, 512);
+    baseGrad.addColorStop(0.0, deepNavy);
+    baseGrad.addColorStop(0.45, navy);
+    baseGrad.addColorStop(1.0, deepNavy);
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Metallic flake sheen
+    for (let i = 0; i < 4500; i++) {
+      const g = Math.random() * 255;
+      ctx.fillStyle = `rgba(${g},${g},${g},0.04)`;
+      ctx.fillRect(Math.random() * 1024, Math.random() * 512, 2, 2);
+    }
+
+    // 2. Engine cover / sidepod flowing blue graphic wave (Red Bull signature sweep)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 200);
+    ctx.bezierCurveTo(180, 120, 360, 280, 560, 220);
+    ctx.bezierCurveTo(760, 160, 900, 290, 1024, 230);
+    ctx.lineTo(1024, 360);
+    ctx.bezierCurveTo(880, 420, 720, 320, 520, 380);
+    ctx.bezierCurveTo(320, 440, 180, 360, 0, 410);
+    ctx.closePath();
+
+    const blueWave = ctx.createLinearGradient(0, 180, 0, 430);
+    blueWave.addColorStop(0.0, brightBlue);
+    blueWave.addColorStop(0.5, cobalt);
+    blueWave.addColorStop(1.0, navy);
+    ctx.fillStyle = blueWave;
+    ctx.fill();
+
+    // Inner darker blue shadow line under the wave
+    ctx.strokeStyle = darkRed;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, 410);
+    ctx.bezierCurveTo(200, 440, 420, 360, 620, 400);
+    ctx.bezierCurveTo(820, 440, 920, 380, 1024, 410);
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Red Bull signature red stripe along the spine (engine cover)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 246);
+    ctx.bezierCurveTo(220, 232, 420, 268, 620, 252);
+    ctx.bezierCurveTo(820, 236, 920, 260, 1024, 248);
+    ctx.lineTo(1024, 264);
+    ctx.bezierCurveTo(900, 280, 760, 252, 560, 268);
+    ctx.bezierCurveTo(360, 284, 200, 256, 0, 268);
+    ctx.closePath();
+    const redStripe = ctx.createLinearGradient(0, 240, 1024, 270);
+    redStripe.addColorStop(0.0, darkRed);
+    redStripe.addColorStop(0.5, redBull);
+    redStripe.addColorStop(1.0, darkRed);
+    ctx.fillStyle = redStripe;
+    ctx.fill();
+    ctx.restore();
+
+    // 4. Flowing red sidepod splashes mirroring the blue wave
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(120, 170);
+    ctx.bezierCurveTo(260, 200, 380, 120, 520, 150);
+    ctx.bezierCurveTo(680, 280, 820, 170, 960, 200);
+    ctx.lineTo(960, 212);
+    ctx.bezierCurveTo(820, 192, 680, 298, 520, 168);
+    ctx.bezierCurveTo(380, 142, 260, 214, 120, 184);
+    ctx.closePath();
+    ctx.fillStyle = redBull;
+    ctx.fill();
+    ctx.restore();
+
+    // 5. Yellow nose / leading edge accent (front of car)
+    ctx.save();
+    const noseGrad = ctx.createLinearGradient(780, 0, 1024, 0);
+    noseGrad.addColorStop(0.0, 'rgba(255,212,0,0.0)');
+    noseGrad.addColorStop(0.25, yellow);
+    noseGrad.addColorStop(1.0, yellow);
+    ctx.fillStyle = noseGrad;
+    ctx.beginPath();
+    ctx.moveTo(780, 180);
+    ctx.lineTo(1024, 160);
+    ctx.lineTo(1024, 360);
+    ctx.lineTo(780, 340);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Sharp nose tip yellow block
+    ctx.fillStyle = yellow;
+    ctx.fillRect(960, 200, 80, 120);
+    ctx.fillStyle = '#b89000';
+    ctx.fillRect(960, 320, 80, 6);
+    ctx.fillRect(960, 200, 80, 6);
+
+    // 6. Front wing / nose tip accent block (yellow halo of light at the very tip)
+    ctx.fillStyle = yellow;
+    ctx.beginPath();
+    ctx.moveTo(1000, 240);
+    ctx.lineTo(1024, 230);
+    ctx.lineTo(1024, 290);
+    ctx.lineTo(1000, 280);
+    ctx.closePath();
+    ctx.fill();
+
+    // 7. Sidepod air intake shadow gradient
+    const intakeGrad = ctx.createLinearGradient(300, 0, 700, 0);
+    intakeGrad.addColorStop(0.0, 'rgba(0,0,0,0.75)');
+    intakeGrad.addColorStop(0.4, 'rgba(0,0,0,0.20)');
+    intakeGrad.addColorStop(1.0, 'rgba(0,0,0,0.0)');
+    ctx.fillStyle = intakeGrad;
+    ctx.fillRect(280, 60, 440, 400);
+
+    // 8. Front Nose Number Badge (Yellow circle, navy outline)
+    ctx.fillStyle = yellow;
+    ctx.beginPath();
+    ctx.arc(905, 256, 44, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#0b1a3a';
+    ctx.stroke();
+    ctx.fillStyle = '#0b1a3a';
+    ctx.font = 'bold 52px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(carNumber, 905, 259);
+
+    // 9. Engine cover "ORACLE RED BULL RACING" sponsor block
+    ctx.fillStyle = 'rgba(11,26,58,0.92)';
+    ctx.fillRect(150, 330, 320, 60);
+    ctx.strokeStyle = yellow;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(150, 330, 320, 60);
+
+    ctx.fillStyle = yellow;
+    ctx.font = '900 28px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('ORACLE', 165, 356);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 22px sans-serif';
+    ctx.fillText('RED BULL RACING', 165, 380);
+
+    // 10. Side sponsor: large "Red Bull" wordmark on engine cover
+    ctx.save();
+    ctx.translate(220, 170);
+    ctx.fillStyle = redBull;
+    ctx.font = '900 italic 60px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Red Bull', 0, 0);
+    ctx.restore();
+
+    // 11. Side sponsor: HONDA power unit branding
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.fillText('HONDA', 540, 120);
+    ctx.fillStyle = redBull;
+    ctx.fillRect(540, 124, 110, 6);
+
+    // 12. Bybit / SIEMENS style side sponsor (mid-sidepod)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('BYBIT', 540, 410);
+    ctx.fillStyle = yellow;
+    ctx.fillRect(540, 414, 86, 4);
+
+    // 13. "RB" monogram near rear
+    ctx.fillStyle = yellow;
+    ctx.font = '900 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('RB', 740, 250);
+
+    // 14. Glossy lacquer top highlight
+    const gloss = ctx.createLinearGradient(0, 0, 0, 180);
+    gloss.addColorStop(0.0, 'rgba(255,255,255,0.20)');
+    gloss.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+    gloss.addColorStop(1.0, 'rgba(255,255,255,0.0)');
+    ctx.fillStyle = gloss;
+    ctx.fillRect(0, 0, 1024, 180);
+
+    // 15. Subtle carbon weave near floor / diffuser area
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    const tileSize = 12;
+    for (let y = 460; y < 512; y += tileSize) {
+      for (let x = 0; x < 1024; x += tileSize) {
+        const diag = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+        ctx.fillStyle = diag ? carbonBlack : '#16181f';
+        ctx.fillRect(x, y, tileSize, tileSize);
+      }
+    }
+    ctx.restore();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.anisotropy = 8;
+    return tex;
+  }
+
+  /**
    * Generates detailed F1 car body livery with racing stripes, number pod, and sponsor decals
    */
   static createCarLiveryTexture(primaryHex = '#e10600', secondaryHex = '#ffffff', accentHex = '#1a1a1a', carNumber = '1') {
@@ -258,6 +482,62 @@ export class TextureFactory {
     ctx.fill();
 
     const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }
+
+  /**
+   * Generates normal map for asphalt surface with aggregate bumps and racing line groove
+   */
+  static createAsphaltNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Base normal (pointing up) - RGB(128, 128, 255)
+    ctx.fillStyle = 'rgb(128, 128, 255)';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Aggregate bumps - subtle normal perturbations
+    for (let i = 0; i < 30000; i++) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      const size = 2 + Math.random() * 3;
+      const intensity = 5 + Math.random() * 10;
+      
+      // Create a small bump normal
+      const bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = size * 2;
+      bumpCanvas.height = size * 2;
+      const bctx = bumpCanvas.getContext('2d');
+      const grad = bctx.createRadialGradient(size, size, 0, size, size, size);
+      grad.addColorStop(0, `rgb(${128 + intensity}, ${128}, ${255 - intensity})`);
+      grad.addColorStop(1, 'rgb(128, 128, 255)');
+      bctx.fillStyle = grad;
+      bctx.fillRect(0, 0, size * 2, size * 2);
+      ctx.drawImage(bumpCanvas, x - size, y - size);
+    }
+
+    // Racing line groove - subtle longitudinal depression
+    const groove = ctx.createLinearGradient(0, 0, 1024, 0);
+    groove.addColorStop(0.18, 'rgba(128,128,255,0)');
+    groove.addColorStop(0.32, 'rgba(120,128,255,0.5)');
+    groove.addColorStop(0.48, 'rgba(128,128,255,0)');
+    groove.addColorStop(0.55, 'rgba(128,128,255,0)');
+    groove.addColorStop(0.68, 'rgba(120,128,255,0.5)');
+    groove.addColorStop(0.82, 'rgba(128,128,255,0)');
+    ctx.fillStyle = groove;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Track edge lines
+    ctx.fillStyle = 'rgb(128, 128, 255)';
+    ctx.fillRect(28, 0, 24, 1024);
+    ctx.fillRect(972, 0, 24, 1024);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 45);
     return tex;
   }
 

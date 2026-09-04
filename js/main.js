@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=40';
-import { F1Car } from './car.js?v=28';
+import { F1Car } from './car.js?v=29';
 import { PhysicsWorld } from './physics.js?v=60';
 import { Track } from './circuit.js?v=320';
 import { TimingSystem } from './timing.js?v=350';
@@ -10,6 +10,7 @@ import { AIGridManager } from './ai.js?v=450';
 import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=300';
 import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=400';
 import { F1_TEAMS, getTeamById } from './teams_db.js?v=100';
+import { EffectsManager } from './fx.js?v=50';
 
 /**
  * Main Application Orchestrator for Phase 4 3D F1 Racing Game with P2P Multiplayer
@@ -42,6 +43,12 @@ class F1Game {
     this.touchThrottle = 0;
     this.touchBrake = 0;
     this.touchSteer = 0;
+
+    // Gamepad state
+    this.gamepad = null;
+    this.gamepadIndex = -1;
+    this.gamepadConnected = false;
+    this.hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     this.keys = {};
 
@@ -84,13 +91,14 @@ class F1Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
 
-    // 4. Lighting (Bright natural Grand Prix daylight matching Crazy Grand Prix)
+    // 4. Lighting with Cascaded Shadow Maps (CSM)
     const hemiLight = new THREE.HemisphereLight(0x8ec8ff, 0x47783b, 1.25);
     this.scene.add(hemiLight);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
     this.scene.add(ambientLight);
 
+    // Main sun light with CSM
     this.sunLight = new THREE.DirectionalLight(0xfff8ee, 1.85);
     this.sunLight.position.set(150, 200, 100);
     this.sunLight.castShadow = true;
@@ -104,12 +112,90 @@ class F1Game {
     this.sunLight.shadow.camera.top = shadowD;
     this.sunLight.shadow.camera.bottom = -shadowD;
     this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.normalBias = 0.02;
     this.scene.add(this.sunLight);
+
+    // CSM: Additional cascade lights for crisp shadows at different distances
+    this.csmCascades = [];
+    const cascadeConfig = [
+      { distance: 30, size: 20, mapSize: 1024 },
+      { distance: 80, size: 40, mapSize: 1024 },
+      { distance: 200, size: 100, mapSize: 1024 },
+    ];
+
+    for (let i = 0; i < cascadeConfig.length; i++) {
+      const config = cascadeConfig[i];
+      const cascadeLight = new THREE.DirectionalLight(0xfff8ee, 0);
+      cascadeLight.position.copy(this.sunLight.position);
+      cascadeLight.castShadow = true;
+      cascadeLight.shadow.mapSize.width = config.mapSize;
+      cascadeLight.shadow.mapSize.height = config.mapSize;
+      cascadeLight.shadow.camera.near = 5;
+      cascadeLight.shadow.camera.far = config.distance;
+      cascadeLight.shadow.camera.left = -config.size;
+      cascadeLight.shadow.camera.right = config.size;
+      cascadeLight.shadow.camera.top = config.size;
+      cascadeLight.shadow.camera.bottom = -config.size;
+      cascadeLight.shadow.bias = -0.0005;
+      cascadeLight.shadow.normalBias = 0.02;
+      cascadeLight.shadow.autoUpdate = false; // Manual update for performance
+      this.scene.add(cascadeLight);
+      this.csmCascades.push({ light: cascadeLight, distance: config.distance, size: config.size });
+    }
 
     // Camera follow vectors
     this.cameraTargetPos = new THREE.Vector3();
     this.cameraLookTarget = new THREE.Vector3();
     this.smoothLookAt = new THREE.Vector3();
+
+    // Reusable scratch vectors (NEVER allocate inside render loop)
+    this._scratchFwd = new THREE.Vector3(0, 0, 1);
+    this._scratchPos = new THREE.Vector3();
+    this._scratchVel = new THREE.Vector3();
+    this._scratchCockpitPos = new THREE.Vector3();
+    this._scratchCockpitLook = new THREE.Vector3();
+    this._scratchTvPos = new THREE.Vector3();
+    this._scratchTvTan = new THREE.Vector3();
+    this._scratchUp = new THREE.Vector3(0, 1, 0);
+
+    // Motion blur vignette post-processing
+    this.initMotionBlurVignette();
+
+    // Particle / FX systems
+    this.fx = new EffectsManager(this.scene);
+    this._wasImpacting = false;
+  }
+
+  initMotionBlurVignette() {
+    // Create a full-screen vignette mesh for high-speed motion blur effect
+    this.vignetteGeometry = new THREE.PlaneGeometry(2, 2);
+    this.vignetteMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      depthTest: false,
+    });
+    this.vignetteMesh = new THREE.Mesh(this.vignetteGeometry, this.vignetteMaterial);
+    this.vignetteMesh.renderOrder = 999;
+    this.vignetteMesh.frustumCulled = false;
+    this.scene.add(this.vignetteMesh);
+
+    // Radial gradient texture for vignette
+    const vignetteCanvas = document.createElement('canvas');
+    vignetteCanvas.width = 512;
+    vignetteCanvas.height = 512;
+    const vctx = vignetteCanvas.getContext('2d');
+    const gradient = vctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+    gradient.addColorStop(0.0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(0.6, 'rgba(0,0,0,0)');
+    gradient.addColorStop(0.85, 'rgba(0,0,0,0.3)');
+    gradient.addColorStop(1.0, 'rgba(0,0,0,0.8)');
+    vctx.fillStyle = gradient;
+    vctx.fillRect(0, 0, 512, 512);
+    this.vignetteTexture = new THREE.CanvasTexture(vignetteCanvas);
+    this.vignetteMaterial.map = this.vignetteTexture;
+    this.vignetteMaterial.needsUpdate = true;
   }
 
   initTrack() {
@@ -130,7 +216,8 @@ class F1Game {
       haloColor: initialTeam.haloColor,
       carNumber: initialTeam.driverNumber,
       driverName: 'PLAYER',
-      teamName: initialTeam.fullName || initialTeam.name
+      teamName: initialTeam.fullName || initialTeam.name,
+      teamId: initialTeam.id
     });
 
     // 10-Car Grid AI Subsystem
@@ -236,12 +323,14 @@ class F1Game {
     ctx.arc(toMmX(sPt.x), toMmY(sPt.z), 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // In Race mode, draw all active 9 AI cars with their team colors
-    if (this.session.currentMode === SESSION_TYPES.RACE && this.aiGrid) {
+    // Draw all active AI cars (yellow/blue/red dots by team on radar)
+    if (this.aiGrid && this.aiGrid.aiCars) {
       for (const ai of this.aiGrid.aiCars) {
         if (ai.active && ai.visualCar && ai.visualCar.group.visible) {
           const aiPos = ai.visualCar.group.position;
-          const aColor = '#' + ai.info.color.toString(16).padStart(6, '0');
+          // Color dots by livery / team palette so positions are easy to read at a glance
+          const team = (ai.info && ai.info.color !== undefined) ? ai.info.color : 0x4d6b8a;
+          const aColor = '#' + team.toString(16).padStart(6, '0');
           ctx.fillStyle = aColor;
           ctx.shadowColor = aColor;
           ctx.shadowBlur = 4;
@@ -253,7 +342,7 @@ class F1Game {
       }
     }
 
-    // Player Dot (F1 Red with heading)
+    // Player Dot (F1 Red with heading) — drawn last so it always sits on top of opponents
     const pPos = this.playerCar.group.position;
     const px = toMmX(pPos.x);
     const py = toMmY(pPos.z);
@@ -265,6 +354,17 @@ class F1Game {
     ctx.arc(px, py, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
+
+    // Player heading triangle (white outline arrow)
+    const pForward = this._scratchFwd.set(0, 0, 1).applyQuaternion(this.playerCar.group.quaternion);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(px + pForward.x * 9, py + pForward.z * 9);
+    ctx.lineTo(px - pForward.x * 4 + (-pForward.z) * 4, py - pForward.z * 4 + (pForward.x) * 4);
+    ctx.lineTo(px - pForward.x * 4 - (-pForward.z) * 4, py - pForward.z * 4 - (pForward.x) * 4);
+    ctx.closePath();
+    ctx.stroke();
   }
 
   initInputs() {
@@ -278,7 +378,6 @@ class F1Game {
       }
 
       // Hotkeys
-      if (e.code === 'KeyC') this.cycleCamera();
       if (e.code === 'KeyR') this.restartSession();
       if (e.code === 'KeyM') this.toggleMute();
       if (e.code === 'KeyH') this.toggleHelpModal();
@@ -295,12 +394,50 @@ class F1Game {
         this.audio.init();
       }
     });
+
+    // Gamepad API
+    this.initGamepad();
+  }
+
+  initGamepad() {
+    window.addEventListener('gamepadconnected', (e) => {
+      this.gamepad = e.gamepad;
+      this.gamepadIndex = e.gamepad.index;
+      this.gamepadConnected = true;
+      console.log('[Gamepad] Connected:', this.gamepad.id, 'at index', this.gamepadIndex);
+      this.showCenterAlert(`GAMEPAD CONNECTED: ${this.gamepad.id}`, 2000);
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      if (e.gamepad.index === this.gamepadIndex) {
+        this.gamepad = null;
+        this.gamepadIndex = -1;
+        this.gamepadConnected = false;
+        console.log('[Gamepad] Disconnected');
+        this.showCenterAlert('GAMEPAD DISCONNECTED', 2000);
+      }
+    });
+
+    // Check for already connected gamepads
+    const gamepads = navigator.getGamepads();
+    for (let i = 0; i < gamepads.length; i++) {
+      if (gamepads[i]) {
+        this.gamepad = gamepads[i];
+        this.gamepadIndex = i;
+        this.gamepadConnected = true;
+        console.log('[Gamepad] Already connected:', this.gamepad.id);
+        break;
+      }
+    }
   }
 
   initMobileControls() {
     const bindTouch = (id, onStart, onEnd) => {
       const btn = document.getElementById(id);
       if (!btn) return;
+
+      // Prevent scrolling/zooming on iOS Safari - touch-action: none disables default touch behaviors
+      btn.style.touchAction = 'none';
 
       const start = (e) => {
         if (e && e.cancelable) e.preventDefault();
@@ -323,19 +460,18 @@ class F1Game {
       btn.addEventListener('mouseleave', end);
     };
 
-    bindTouch('touch-left', () => this.touchSteer = 1, () => this.touchSteer = 0);
-    bindTouch('touch-right', () => this.touchSteer = -1, () => this.touchSteer = 0);
-    bindTouch('touch-throttle', () => this.touchThrottle = 1, () => this.touchThrottle = 0);
-    bindTouch('touch-brake', () => this.touchBrake = 1, () => this.touchBrake = 0);
-
-    const camBtn = document.getElementById('touch-cam');
-    if (camBtn) {
-      camBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!this.audio.isInitialized) this.audio.init();
-        this.cycleCamera();
-      });
+    // Check if we need virtual analog steering slider (for touch devices without gamepad)
+    if (this.hasTouchSupport) {
+      this.initVirtualAnalogControls();
+    } else {
+      // Traditional button controls for desktop testing
+      bindTouch('touch-left', () => this.touchSteer = 1, () => this.touchSteer = 0);
+      bindTouch('touch-right', () => this.touchSteer = -1, () => this.touchSteer = 0);
+      bindTouch('touch-throttle', () => this.touchThrottle = 1, () => this.touchThrottle = 0);
+      bindTouch('touch-brake', () => this.touchBrake = 1, () => this.touchBrake = 0);
     }
+
+
 
     const resetBtn = document.getElementById('touch-reset');
     if (resetBtn) {
@@ -346,26 +482,273 @@ class F1Game {
     }
   }
 
+  initVirtualAnalogControls() {
+    // Create virtual analog steering slider on left
+    const steerZone = document.getElementById('touch-left');
+    const rightZone = document.getElementById('touch-right');
+    
+    if (steerZone && rightZone) {
+      // Replace buttons with analog zones
+      steerZone.outerHTML = `
+        <div id="virtual-steer" class="virtual-analog-zone" style="
+          position: fixed;
+          left: 20px;
+          bottom: 20px;
+          width: 120px;
+          height: 120px;
+          background: rgba(13,17,26,0.7);
+          border: 2px solid rgba(0,240,255,0.3);
+          border-radius: 60px;
+          touch-action: none;
+          z-index: 999;
+        "></div>
+      `;
+      
+      rightZone.outerHTML = `
+        <div id="virtual-pedals" class="virtual-analog-zone" style="
+          position: fixed;
+          right: 20px;
+          bottom: 20px;
+          width: 140px;
+          height: 180px;
+          background: rgba(13,17,26,0.7);
+          border: 2px solid rgba(255,255,255,0.1);
+          border-radius: 20px;
+          touch-action: none;
+          z-index: 999;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-around;
+          padding: 15px;
+          align-items: center;
+        ">
+          <div id="virtual-brake" class="virtual-pedal" style="
+            width: 70px; height: 70px;
+            background: rgba(255,59,48,0.3);
+            border: 2px solid rgba(255,59,48,0.5);
+            border-radius: 35px;
+            display: flex; align-items: center; justify-content: center;
+            color: #ff3b30; font-weight: 900; font-size: 11px;
+            touch-action: none;
+          ">BRAKE</div>
+          <div id="virtual-throttle" class="virtual-pedal" style="
+            width: 80px; height: 80px;
+            background: rgba(0,210,190,0.3);
+            border: 2px solid rgba(0,210,190,0.5);
+            border-radius: 40px;
+            display: flex; align-items: center; justify-content: center;
+            color: #00d2be; font-weight: 900; font-size: 11px;
+            touch-action: none;
+          ">GAS</div>
+        </div>
+      `;
+
+      this.setupVirtualAnalogSteering();
+      this.setupVirtualPedals();
+    }
+
+    // Keep reset button
+
+    const resetBtn = document.getElementById('touch-reset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.restartSession();
+      });
+    }
+  }
+
+  setupVirtualAnalogSteering() {
+    const steerZone = document.getElementById('virtual-steer');
+    if (!steerZone) return;
+
+    let activeTouchId = null;
+    const centerX = 60; // half of 120px
+    const centerY = 60;
+    const maxRadius = 50;
+
+    const handleTouchStart = (e) => {
+      e.preventDefault();
+      if (!this.audio.isInitialized) this.audio.init();
+      const touch = e.changedTouches[0];
+      activeTouchId = touch.identifier;
+      this.updateVirtualSteer(touch.clientX, touch.clientY, steerZone, centerX, centerY, maxRadius);
+    };
+
+    const handleTouchMove = (e) => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === activeTouchId) {
+          this.updateVirtualSteer(touch.clientX, touch.clientY, steerZone, centerX, centerY, maxRadius);
+          break;
+        }
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === activeTouchId) {
+          activeTouchId = null;
+          this.touchSteer = 0;
+          break;
+        }
+      }
+    };
+
+    steerZone.addEventListener('touchstart', handleTouchStart, { passive: false });
+    steerZone.addEventListener('touchmove', handleTouchMove, { passive: false });
+    steerZone.addEventListener('touchend', handleTouchEnd, { passive: false });
+    steerZone.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+  }
+
+  updateVirtualSteer(clientX, clientY, steerZone, centerX, centerY, maxRadius) {
+    const rect = steerZone.getBoundingClientRect();
+    const x = clientX - rect.left - centerX;
+    const y = clientY - rect.top - centerY;
+    const dist = Math.sqrt(x * x + y * y);
+    
+    // Clamp to circle
+    let clampedX = x;
+    let clampedY = y;
+    if (dist > maxRadius) {
+      clampedX = (x / dist) * maxRadius;
+      clampedY = (y / dist) * maxRadius;
+    }
+    
+    // Visual feedback - move a small indicator
+    steerZone.style.background = `radial-gradient(circle at ${centerX + clampedX}px ${centerY + clampedY}px, rgba(0,240,255,0.3), rgba(13,17,26,0.7))`;
+    
+    // Steer is horizontal offset (-1 left, +1 right)
+    this.touchSteer = -clampedX / maxRadius;
+  }
+
+  setupVirtualPedals() {
+    const brakeBtn = document.getElementById('virtual-brake');
+    const throttleBtn = document.getElementById('virtual-throttle');
+    
+    if (!brakeBtn || !throttleBtn) return;
+
+    let activeBrakeTouch = null;
+    let activeThrottleTouch = null;
+
+    const bindPedal = (btn, pedalType) => {
+      const start = (e) => {
+        e.preventDefault();
+        if (!this.audio.isInitialized) this.audio.init();
+        btn.classList.add('active');
+        btn.style.background = pedalType === 'brake' 
+          ? 'rgba(255,59,48,0.6)' 
+          : 'rgba(0,210,190,0.6)';
+        if (pedalType === 'brake') {
+          activeBrakeTouch = e.changedTouches[0].identifier;
+          this.touchBrake = 1;
+        } else {
+          activeThrottleTouch = e.changedTouches[0].identifier;
+          this.touchThrottle = 1;
+        }
+      };
+      
+      const end = (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if ((pedalType === 'brake' && touch.identifier === activeBrakeTouch) ||
+              (pedalType === 'throttle' && touch.identifier === activeThrottleTouch)) {
+            btn.classList.remove('active');
+            btn.style.background = pedalType === 'brake' 
+              ? 'rgba(255,59,48,0.3)' 
+              : 'rgba(0,210,190,0.3)';
+            if (pedalType === 'brake') {
+              activeBrakeTouch = null;
+              this.touchBrake = 0;
+            } else {
+              activeThrottleTouch = null;
+              this.touchThrottle = 0;
+            }
+            break;
+          }
+        }
+      };
+
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', end, { passive: false });
+      btn.addEventListener('touchcancel', end, { passive: false });
+    };
+
+    bindPedal(brakeBtn, 'brake');
+    bindPedal(throttleBtn, 'throttle');
+  }
+
   updateControls(dt) {
+    // Poll gamepad state
+    if (this.gamepadConnected) {
+      const gamepads = navigator.getGamepads();
+      this.gamepad = gamepads[this.gamepadIndex];
+    }
+
     // If controls locked during lights countdown in Race mode
     if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
-      const isAcc = (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0);
+      const isAcc = (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || (this.gamepad && this.gamepad.buttons[7].pressed)); // RT/R2
       this.controls.throttle = isAcc ? 0.3 : 0; // jump start probe
       this.controls.brake = 1.0;
       this.controls.steer = 0;
       return;
     }
 
-    // Throttle (W, Up Arrow, or Mobile Touch Gas)
-    const isAccelerating = this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0;
+    // Gamepad input (if connected)
+    let gamepadThrottle = 0;
+    let gamepadBrake = 0;
+    let gamepadSteer = 0;
+
+    if (this.gamepad && this.gamepadConnected) {
+      // Left Stick X axis for steering (standard mapping: axes[0])
+      const leftStickX = this.gamepad.axes[0] || 0;
+      // D-Pad fallback for steering
+      const dpadLeft = this.gamepad.buttons[14]?.pressed || false;
+      const dpadRight = this.gamepad.buttons[15]?.pressed || false;
+      
+      if (Math.abs(leftStickX) > 0.1) {
+        gamepadSteer = -leftStickX; // Invert: left stick left = positive steer (turn left)
+      } else if (dpadLeft) {
+        gamepadSteer = 1;
+      } else if (dpadRight) {
+        gamepadSteer = -1;
+      }
+
+      // Right Trigger (RT/R2) - index 7 for standard gamepad, 5 for some
+      const rtValue = this.gamepad.buttons[7]?.value || this.gamepad.buttons[5]?.value || 0;
+      if (rtValue > 0.05) {
+        gamepadThrottle = rtValue;
+      }
+
+      // Left Trigger (LT/L2) - index 6 for standard gamepad, 4 for some
+      const ltValue = this.gamepad.buttons[6]?.value || this.gamepad.buttons[4]?.value || 0;
+      if (ltValue > 0.05) {
+        gamepadBrake = ltValue;
+      }
+
+      // Also support face buttons: A (cross) for throttle, B (circle) for brake
+      if (this.gamepad.buttons[0]?.pressed) { // A / Cross
+        gamepadThrottle = Math.max(gamepadThrottle, 1.0);
+      }
+      if (this.gamepad.buttons[1]?.pressed) { // B / Circle
+        gamepadBrake = Math.max(gamepadBrake, 1.0);
+      }
+    }
+
+    // Throttle (W, Up Arrow, or Mobile Touch Gas, or Gamepad RT)
+    const isAccelerating = this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || gamepadThrottle > 0;
+    const targetThrottle = isAccelerating ? Math.max(this.touchThrottle, gamepadThrottle, 1.0) : 0;
     if (isAccelerating) {
       this.controls.throttle = Math.min(1.0, this.controls.throttle + dt * 5.5);
     } else {
       this.controls.throttle = Math.max(0.0, this.controls.throttle - dt * 7.5);
     }
 
-    // Brake / Reverse (S, Down Arrow, or Mobile Touch Brake)
-    const isBraking = this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.touchBrake > 0;
+    // Brake / Reverse (S, Down Arrow, or Mobile Touch Brake, or Gamepad LT)
+    const isBraking = this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.touchBrake > 0 || gamepadBrake > 0;
     if (isBraking) {
       // Anti-reverse protection near Start/Finish line & starting lights
       if (this.track && this.playerVehicle) {
@@ -384,14 +767,15 @@ class F1Game {
       this.controls.brake = Math.max(0.0, this.controls.brake - dt * 8.5);
     }
 
-    // Steering: A / Left Arrow / Touch-Left = Steer LEFT (+1)
-    //           D / Right Arrow / Touch-Right = Steer RIGHT (-1)
+    // Steering: A / Left Arrow / Touch-Left / Gamepad Left Stick = Steer LEFT (+1)
+    //           D / Right Arrow / Touch-Right / Gamepad Right Stick = Steer RIGHT (-1)
     let targetSteer = 0;
     const isLeft = this.keys['KeyA'] || this.keys['ArrowLeft'] || this.keys['a'];
     const isRight = this.keys['KeyD'] || this.keys['ArrowRight'] || this.keys['d'];
     if (isLeft) targetSteer += 1;
     if (isRight) targetSteer -= 1;
     targetSteer += this.touchSteer;
+    targetSteer += gamepadSteer;
     targetSteer = Math.max(-1, Math.min(1, targetSteer));
 
     // AAA Asymmetric Smoothing Filter:
@@ -402,13 +786,8 @@ class F1Game {
   }
 
   cycleCamera() {
-    if (this.cameraMode === 'CHASE') this.cameraMode = 'COCKPIT';
-    else if (this.cameraMode === 'COCKPIT') this.cameraMode = 'TV';
-    else this.cameraMode = 'CHASE';
-
-    const camBtn = document.getElementById('camera-btn');
-    if (camBtn) camBtn.title = `Camera: ${this.cameraMode}`;
-    this.showCenterAlert(`CAMERA: ${this.cameraMode}`, 1200);
+    // Camera is permanently locked to Third-Person Chase View
+    this.cameraMode = 'CHASE';
   }
 
   updateCamera(dt, carPos, carForward, speedMps) {
@@ -450,21 +829,21 @@ class F1Game {
       this.camera.fov = 72;
       this.camera.updateProjectionMatrix();
 
-      const cockpitPos = new THREE.Vector3(0, 0.58, 0.45);
+      this._scratchCockpitPos.set(0, 0.58, 0.45);
       if (focusCar && focusCar.visualBody) {
-        focusCar.visualBody.localToWorld(cockpitPos);
+        focusCar.visualBody.localToWorld(this._scratchCockpitPos);
       } else {
-        cockpitPos.copy(effPos).add(new THREE.Vector3(0, 0.58, 0.45));
+        this._scratchCockpitPos.copy(effPos).add(this._scratchCockpitPos);
       }
-      this.camera.position.copy(cockpitPos);
+      this.camera.position.copy(this._scratchCockpitPos);
 
-      const lookPt = new THREE.Vector3(0, 0.56, 10.0);
+      this._scratchCockpitLook.set(0, 0.56, 10.0);
       if (focusCar && focusCar.visualBody) {
-        focusCar.visualBody.localToWorld(lookPt);
+        focusCar.visualBody.localToWorld(this._scratchCockpitLook);
       } else {
-        lookPt.copy(effPos).add(new THREE.Vector3(0, 0.56, 10.0));
+        this._scratchCockpitLook.copy(effPos).add(this._scratchCockpitLook);
       }
-      this.camera.lookAt(lookPt);
+      this.camera.lookAt(this._scratchCockpitLook);
 
     } else if (this.cameraMode === 'TV') {
       // Cinematic trackside broadcast camera
@@ -473,13 +852,23 @@ class F1Game {
 
       // Find nearby vantage point on track
       const trackInfo = this.track.getClosestTrackPoint(effPos.x, effPos.z);
-      const tvPos = new THREE.Vector3()
-        .copy(trackInfo.point)
-        .addScaledVector(new THREE.Vector3(0, 1, 0), 12.0)
-        .addScaledVector(new THREE.Vector3(-trackInfo.tangent.z, 0, trackInfo.tangent.x), 22.0);
+      this._scratchTvTan.set(-trackInfo.tangent.z, 0, trackInfo.tangent.x);
+      this._scratchTvPos.copy(trackInfo.point)
+        .addScaledVector(this._scratchUp, 12.0)
+        .addScaledVector(this._scratchTvTan, 22.0);
 
-      this.camera.position.lerp(tvPos, Math.min(1, dt * 1.5));
+      this.camera.position.lerp(this._scratchTvPos, Math.min(1, dt * 1.5));
       this.camera.lookAt(effPos.x, effPos.y + 0.5, effPos.z);
+    }
+
+    // Inject camera shake offset (after the chosen mode has set position/look)
+    if (this.fx) {
+      const shakeOffset = this.fx.getShakeOffset();
+      if (this.fx.shakeTime > 0) {
+        this.camera.position.x += shakeOffset.x;
+        this.camera.position.y += shakeOffset.y;
+        this.camera.position.z += shakeOffset.z;
+      }
     }
   }
 
@@ -530,9 +919,6 @@ class F1Game {
     // Icon action buttons
     const muteBtn = document.getElementById('mute-btn');
     if (muteBtn) muteBtn.addEventListener('click', () => this.toggleMute());
-
-    const camBtn = document.getElementById('camera-btn');
-    if (camBtn) camBtn.addEventListener('click', () => this.cycleCamera());
 
     const restartBtn = document.getElementById('restart-btn');
     if (restartBtn) restartBtn.addEventListener('click', () => this.restartSession());
@@ -711,8 +1097,16 @@ class F1Game {
     // 0-4: Green (8000-10500 RPM)
     // 5-9: Red (10500-12500 RPM)
     // 10-14: Purple (12500-13500 RPM, flashing at redline)
-    const rpmFrac = Math.max(0, (rpm - 6000) / 7500);
+    const rpmFrac = Math.max(0, Math.min(1, (rpm - 6000) / 7500));
     const activeLeds = Math.min(15, Math.floor(rpmFrac * 15));
+
+    // Phase 5: Tachometer Bar (continuous RPM gauge)
+    const tachFill = document.getElementById('tach-fill');
+    if (tachFill) {
+      tachFill.style.width = `${rpmFrac * 100}%`;
+      if (rpmFrac > 0.97) tachFill.classList.add('over-red');
+      else tachFill.classList.remove('over-red');
+    }
 
     for (let i = 0; i < 15; i++) {
       const led = document.getElementById(`rpm-led-${i}`);
@@ -858,6 +1252,50 @@ class F1Game {
     if (s1) setSectorClass(s1, this.timing.sectorTimes[0], true);
     if (s2) setSectorClass(s2, this.timing.sectorTimes[1], true);
     if (s3) setSectorClass(s3, this.timing.sectorTimes[2], true);
+
+    // Phase 5: Sector Delta Tracker (3 split per-sector +/- vs session best)
+    this.renderSectorDeltas();
+  }
+
+  /**
+   * Render the per-sector delta splits (+/- vs each sector's best time this session)
+   */
+  renderSectorDeltas() {
+    const cells = [
+      document.getElementById('sd-1'),
+      document.getElementById('sd-2'),
+      document.getElementById('sd-3')
+    ];
+    const bests = (this.timing && this.timing.sessionBestSectorTimes) || [null, null, null];
+    const current = (this.timing && this.timing.sectorTimes) || [null, null, null];
+
+    for (let i = 0; i < 3; i++) {
+      const cell = cells[i];
+      if (!cell) continue;
+      const valEl = cell.querySelector('.sd-value');
+      const c = current[i];
+      const b = bests[i];
+
+      if (c === null || c === undefined) {
+        cell.className = 'sd-cell neutral';
+        if (valEl) valEl.textContent = '--';
+        continue;
+      }
+
+      if (b && Number.isFinite(b) && b > 0) {
+        const delta = c - b;
+        const sign = delta > 0 ? '+' : '-';
+        if (valEl) valEl.textContent = `${sign}${Math.abs(delta).toFixed(3)}`;
+        // Tiny epsilon so perfectly matching sectors still show purple
+        if (Math.abs(delta) < 0.001) cell.className = 'sd-cell purple';
+        else if (delta < 0) cell.className = 'sd-cell green';
+        else cell.className = 'sd-cell red';
+      } else {
+        // First lap / no reference yet -> purple (overall best by default)
+        if (valEl) valEl.textContent = `${c.toFixed(2)}s`;
+        cell.className = 'sd-cell purple';
+      }
+    }
   }
 
   showCenterAlert(text, durationMs = 2500, cssClass = 'alert-flying-lap') {
@@ -1268,7 +1706,10 @@ class F1Game {
       }
     });
 
-    // 6. Reset session cleanly to Practice mode on the new starting grid
+    // 6. Reset session state to clean defaults before initializing new session
+    this.session.resetSessionState();
+
+    // 7. Reset session cleanly to Practice mode on the new starting grid
     this.session.initSession(SESSION_TYPES.PRACTICE, this.playerVehicle, this.playerCar);
     this.showCenterAlert(`CIRCUIT LOADED: ${trackData.name.toUpperCase()}`, 2500, 'alert-flying-lap');
   }
@@ -1774,7 +2215,8 @@ class F1Game {
 
       const guestCar = (this.aiGrid && this.aiGrid.aiCars) ? this.aiGrid.aiCars[0] : null;
       const gPos = guestCar ? guestCar.visualCar.group.position : this.playerCar.group.position;
-      const gForward = new THREE.Vector3(0, 0, 1).applyQuaternion(guestCar ? guestCar.visualCar.group.quaternion : this.playerCar.group.quaternion);
+      this._scratchFwd.set(0, 0, 1).applyQuaternion(guestCar ? guestCar.visualCar.group.quaternion : this.playerCar.group.quaternion);
+      const gForward = this._scratchFwd;
 
       this.updateCamera(dt, gPos, gForward, guestSpeedKmh / 3.6);
 
@@ -1812,10 +2254,34 @@ class F1Game {
     this.playerCar.setPositionAndRotation(pPos, pQuat);
 
     const vel = this.playerVehicle.body.velocity;
-    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.playerCar.group.quaternion);
+    this._scratchFwd.set(0, 0, 1).applyQuaternion(this.playerCar.group.quaternion);
+    const forward = this._scratchFwd;
     const rawSpeedMps = vel.x * forward.x + vel.z * forward.z;
     const speedMps = Number.isFinite(rawSpeedMps) ? rawSpeedMps : 0;
     const speedKmh = Math.abs(speedMps) * 3.6;
+
+    // Detect bottoming out: high vertical velocity (from kerbs) or low ride height at high speed
+    const isBottomingOut = Math.abs(vel.y) > 1.5 || (speedMps > 60 && this.track && Math.random() < 0.02);
+
+    // Apply damage on high-speed impact
+    if (this.playerVehicle.justImpacted) {
+      const impulse = this.playerVehicle.impactImpulse || 0;
+      if (impulse > 8.0) {
+        this.playerCar.applyFrontWingDamage(Math.min(0.5, impulse / 30));
+        this.fx.triggerShake(Math.min(1.2, impulse / 16));
+        this.audio.playWallImpact(impulse);
+      } else if (impulse > 5.5) {
+        this.fx.triggerShake(Math.min(1.2, impulse / 16));
+        this.audio.playWallImpact(impulse);
+      }
+      this.playerVehicle.justImpacted = false;
+    }
+
+    // Repair damage when crossing start/finish line (pit stop simulation)
+    const trackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z);
+    if (trackInfo.t < 0.02 && this.playerCar.damage.frontWingDamage > 0) {
+      this.playerCar.repairDamage();
+    }
 
     this.playerCar.update(
       dt,
@@ -1823,26 +2289,17 @@ class F1Game {
       this.playerVehicle.steerAngle,
       this.playerVehicle.lateralSlip,
       this.controls.throttle,
-      this.controls.brake
-    );
-
-    this.session.update(dt, this.playerVehicle, pPos, vel);
-    this.timing.update(pPos, vel);
-
-    this.lastCheckedLap = this.timing.currentLap;
-
-    if (this.track && this.track.update) {
-      this.track.update(dt);
-    }
-
-    this.audio.update(
-      this.playerVehicle.rpm,
-      this.controls.throttle,
-      speedKmh,
-      this.playerVehicle.lateralSlip
+      this.controls.brake,
+      isBottomingOut
     );
 
     this.updateCamera(dt, this.playerCar.group.position, forward, speedMps);
+
+    // Update Cascaded Shadow Maps to follow the car
+    this.updateCsmCascades(pPos);
+
+    // Update motion blur vignette based on speed
+    this.updateMotionBlurVignette(speedKmh);
 
     this.sunLight.position.set(pPos.x + 120, 180, pPos.z + 80);
     this.sunLight.target = this.playerCar.group;
@@ -1873,6 +2330,37 @@ class F1Game {
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  updateCsmCascades(carPos) {
+    if (!this.csmCascades || this.csmCascades.length === 0) return;
+    
+    // Update each cascade to center on the car position
+    for (let i = 0; i < this.csmCascades.length; i++) {
+      const cascade = this.csmCascades[i];
+      cascade.light.position.set(carPos.x, cascade.light.position.y, carPos.z);
+      cascade.light.shadow.camera.position.set(carPos.x, carPos.y + 100, carPos.z);
+      cascade.light.shadow.camera.lookAt(carPos.x, carPos.y, carPos.z);
+      cascade.light.shadow.camera.updateProjectionMatrix();
+      cascade.light.shadow.needsUpdate = true;
+    }
+  }
+
+  updateMotionBlurVignette(speedKmh) {
+    if (!this.vignetteMesh || !this.vignetteMaterial) return;
+    
+    // Activate vignette at speeds exceeding 280 km/h
+    const threshold = 280;
+    if (speedKmh > threshold) {
+      const intensity = Math.min(1.0, (speedKmh - threshold) / 80);
+      this.vignetteMaterial.opacity = intensity * 0.35;
+      // Subtle radial scale distortion
+      const scale = 1.0 + intensity * 0.02;
+      this.vignetteMesh.scale.setScalar(scale);
+    } else {
+      this.vignetteMaterial.opacity = 0.0;
+      this.vignetteMesh.scale.setScalar(1.0);
+    }
   }
 }
 

@@ -63,7 +63,7 @@ export class NetworkManager {
   /**
    * Host a new room with a 6-character room code
    */
-  hostRoom(roomCode = null) {
+  hostRoom(roomCode = null, retryCount = 0) {
     this.cleanup();
     this.isHost = true;
     this.roomCode = roomCode || NetworkManager.generateRoomCode();
@@ -74,6 +74,8 @@ export class NetworkManager {
       if (this.onError) this.onError('PeerJS library not loaded. Check internet connection.');
       return;
     }
+
+    const MAX_RETRIES = 5;
 
     try {
       this.peer = new window.Peer(peerId, {
@@ -99,9 +101,9 @@ export class NetworkManager {
 
       this.peer.on('error', (err) => {
         console.error('[Host] Peer error:', err);
-        if (err.type === 'unavailable-id') {
-          // Retry with new code if collision
-          this.hostRoom();
+        if (err.type === 'unavailable-id' && retryCount < MAX_RETRIES) {
+          // Retry with new code if collision (max 5 retries)
+          this.hostRoom(null, retryCount + 1);
         } else {
           if (this.onError) this.onError(err.message || 'PeerJS network error');
         }

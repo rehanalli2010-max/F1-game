@@ -109,20 +109,27 @@ export class TimingSystem {
     }
 
     // 3. Sector & Lap Progression Detection
-    // Sector 1: ~1/3 of lap (between 0.20 and 0.45)
-    if (progress >= 0.20 && progress <= 0.45 && !this.sector1Reached) {
+    // Use track checkpoints for sector boundaries instead of hardcoded progress values
+    // Checkpoints are at 0/8, 1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8 of lap
+    // Sector 1 ends at checkpoint 3 (3/8 = 0.375), Sector 2 at checkpoint 5 (5/8 = 0.625), Sector 3 at checkpoint 7 (7/8 = 0.875)
+    const sector1End = this.track.checkpoints && this.track.checkpoints[3] ? this.track.checkpoints[3].t : 0.375;
+    const sector2End = this.track.checkpoints && this.track.checkpoints[5] ? this.track.checkpoints[5].t : 0.625;
+    const sector3End = this.track.checkpoints && this.track.checkpoints[7] ? this.track.checkpoints[7].t : 0.875;
+
+    // Sector 1
+    if (progress >= sector1End - 0.05 && progress <= sector1End + 0.05 && !this.sector1Reached) {
       this.sector1Reached = true;
       this.checkpointsHit.add(1);
       this.onPassSector(1, this.currentLapTime);
     }
-    // Sector 2: ~2/3 of lap (between 0.55 and 0.80)
-    if (progress >= 0.55 && progress <= 0.80 && !this.sector2Reached && this.sector1Reached) {
+    // Sector 2
+    if (progress >= sector2End - 0.05 && progress <= sector2End + 0.05 && !this.sector2Reached && this.sector1Reached) {
       this.sector2Reached = true;
       this.checkpointsHit.add(2);
       this.onPassSector(2, this.currentLapTime);
     }
-    // Sector 3 approach: back half approaching main straight (t >= 0.85)
-    if (progress >= 0.85 && this.sector1Reached && this.sector2Reached) {
+    // Sector 3 approach
+    if (progress >= sector3End - 0.05 && this.sector1Reached && this.sector2Reached) {
       this.sector3Reached = true;
       this.checkpointsHit.add(3);
     }
@@ -167,8 +174,12 @@ export class TimingSystem {
   onCompleteLap() {
     const completedLapTime = this.currentLapTime;
 
-    // Anti-cheat: Ensure minimum realistic lap time was achieved (at least 20.0s for Monza 1,850m)
-    if (completedLapTime < 20.0) {
+    // Anti-cheat: Ensure minimum realistic lap time was achieved
+    // Calculate based on track length and max realistic F1 speed (~350 km/h = 97 m/s)
+    // Add 20% margin for safety: minTime = (trackLength / 97) * 1.2
+    const trackLength = this.track.trackLength || 1850;
+    const minRealisticTime = (trackLength / 97.0) * 1.2;
+    if (completedLapTime < minRealisticTime) {
       this.lapInvalidated = true;
       this.resetLapTimer();
       return { valid: false, reason: 'LAP_TOO_FAST' };

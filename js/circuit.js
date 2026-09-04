@@ -361,8 +361,11 @@ export class Track {
     geo.setIndex(indices);
 
     const asphaltTex = TextureFactory.createAsphaltTexture();
+    const asphaltNormalMap = TextureFactory.createAsphaltNormalMap();
     const roadMat = new THREE.MeshStandardMaterial({
       map: asphaltTex,
+      normalMap: asphaltNormalMap,
+      normalScale: new THREE.Vector2(0.5, 0.5),
       roughness: 0.85,
       metalness: 0.1
     });
