@@ -563,12 +563,19 @@ export class AICar {
     // Heading yaw aligned with path + steer angle
     const targetYaw = Math.atan2(newTgt.x, newTgt.z) + (this.currentSteer * 0.12);
 
-    body.position.set(finalX, 0.04, finalZ);
+    const newPtY = (newPt && Number.isFinite(newPt.y)) ? newPt.y : 0;
+    body.position.set(finalX, newPtY + 0.04, finalZ);
     body.velocity.set(newTgt.x * this.currentSpeed, 0, newTgt.z * this.currentSpeed);
 
     const q = this.visualCar.group.quaternion;
     q.setFromAxisAngle(upVec, targetYaw);
-    this.visualCar.group.position.set(finalX, 0.04, finalZ);
+    if (newTgt && Number.isFinite(newTgt.y)) {
+      const pitchAngle = -Math.asin(Math.max(-0.45, Math.min(0.45, newTgt.y)));
+      if (!this._aiPitch) this._aiPitch = new THREE.Quaternion();
+      this._aiPitch.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchAngle);
+      q.multiply(this._aiPitch);
+    }
+    this.visualCar.group.position.set(finalX, newPtY + 0.04, finalZ);
 
     // Update wheels and visuals
     this.visualCar.update(dt, this.currentSpeed, this.currentSteer, 0, throttle, brake);
@@ -810,14 +817,19 @@ export class AIGridManager {
       let insideApexSign = 0;
       let targetSpeed = 86.0; // ~310 km/h default straight speed
 
-      if (Math.abs(curvature) > 0.08) {
+      if (Math.abs(curvature) > 0.12) {
         insideApexSign = curvature > 0 ? -1 : 1;
-        offset = insideApexSign * 3.4; // Clip inside curb
-        targetSpeed = Math.max(32.0, 84.0 - Math.abs(curvature) * 220.0);
-      } else if (Math.abs(curvature) > 0.03) {
+        offset = insideApexSign * 3.2; // Clip inside curb
+        // Hairpin apexes (Monaco Fairmont Hairpin, etc.): safe cornering ~48 km/h
+        targetSpeed = Math.max(13.5, 74.0 - Math.abs(curvature) * 300.0);
+      } else if (Math.abs(curvature) > 0.06) {
         insideApexSign = curvature > 0 ? -1 : 1;
-        offset = insideApexSign * 2.0;
-        targetSpeed = Math.max(48.0, 86.0 - Math.abs(curvature) * 180.0);
+        offset = insideApexSign * 2.4;
+        targetSpeed = Math.max(26.0, 80.0 - Math.abs(curvature) * 240.0);
+      } else if (Math.abs(curvature) > 0.025) {
+        insideApexSign = curvature > 0 ? -1 : 1;
+        offset = insideApexSign * 1.5;
+        targetSpeed = Math.max(42.0, 86.0 - Math.abs(curvature) * 180.0);
       }
 
       const wpPos = new THREE.Vector3().copy(pt).addScaledVector(norm, offset);

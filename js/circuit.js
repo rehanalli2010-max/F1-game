@@ -545,18 +545,20 @@ export class Track {
 
     // Physical Cannon-es Static Box Colliders for Side Barriers
     if (this.physics && this.physics.world && typeof CANNON !== 'undefined') {
-      const step = 6; // Segment every ~18-20m
+      const step = 2; // High-fidelity 2-sample segments (~5m) prevents chord cutting on tight hairpins
       for (let i = 0; i < count; i += step) {
         const idx1 = i;
         const idx2 = (i + step) % count;
         const pt1 = pts[idx1];
         const pt2 = pts[idx2];
         const tgt1 = this.sampledTangents[idx1];
+        const tgt2 = this.sampledTangents[idx2];
         const norm1 = new THREE.Vector3().crossVectors(tgt1, up).normalize();
+        const norm2 = new THREE.Vector3().crossVectors(tgt2, up).normalize();
 
         // Left static barrier box
         const l1 = new THREE.Vector3().copy(pt1).addScaledVector(norm1, -barrierDist);
-        const l2 = new THREE.Vector3().copy(pt2).addScaledVector(norm1, -barrierDist);
+        const l2 = new THREE.Vector3().copy(pt2).addScaledVector(norm2, -barrierDist);
         const lMid = new THREE.Vector3().addVectors(l1, l2).multiplyScalar(0.5);
         const lSeg = new THREE.Vector3().subVectors(l2, l1);
         const lLen = lSeg.length();
@@ -564,7 +566,7 @@ export class Track {
         const leftBody = new CANNON.Body({
           mass: 0,
           position: new CANNON.Vec3(lMid.x, (l1.y + l2.y) / 2 + 0.7, lMid.z),
-          shape: new CANNON.Box(new CANNON.Vec3(0.5, 1.0, lLen / 2 + 0.6))
+          shape: new CANNON.Box(new CANNON.Vec3(0.35, 1.0, lLen / 2 + 0.1))
         });
         const lYaw = Math.atan2(lSeg.x, lSeg.z);
         leftBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), lYaw);
@@ -573,7 +575,7 @@ export class Track {
 
         // Right static barrier box
         const r1 = new THREE.Vector3().copy(pt1).addScaledVector(norm1, barrierDist);
-        const r2 = new THREE.Vector3().copy(pt2).addScaledVector(norm1, barrierDist);
+        const r2 = new THREE.Vector3().copy(pt2).addScaledVector(norm2, barrierDist);
         const rMid = new THREE.Vector3().addVectors(r1, r2).multiplyScalar(0.5);
         const rSeg = new THREE.Vector3().subVectors(r2, r1);
         const rLen = rSeg.length();
@@ -581,7 +583,7 @@ export class Track {
         const rightBody = new CANNON.Body({
           mass: 0,
           position: new CANNON.Vec3(rMid.x, (r1.y + r2.y) / 2 + 0.7, rMid.z),
-          shape: new CANNON.Box(new CANNON.Vec3(0.5, 1.0, rLen / 2 + 0.6))
+          shape: new CANNON.Box(new CANNON.Vec3(0.35, 1.0, rLen / 2 + 0.1))
         });
         const rYaw = Math.atan2(rSeg.x, rSeg.z);
         rightBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), rYaw);
@@ -1225,6 +1227,16 @@ export class Track {
           roofColor: 0xffcc00
         }
       ];
+    } else if (this.trackData.id === 'monaco') {
+      // Custom spectator grandstands tailored for Monaco GP street geometry (guaranteed zero clipping)
+      grandstandSpecs = [
+        // Grandstand K (Overlooking Harbor & Swimming Pool complex)
+        { t: 0.88, side: -1, dist: this.barrierDistance + 5.0, length: 50, depth: 8, height: 7.5, rows: 6, sponsor: 'ROLEX', roofColor: 0x00594f },
+        // Grandstand T (Overlooking Pit Straight & Rascasse exit)
+        { t: 0.985, side: -1, dist: this.barrierDistance + 5.0, length: 42, depth: 8, height: 7.0, rows: 6, sponsor: 'TAG HEUER', roofColor: 0xe10600 },
+        // Casino Square Viewing Terrace
+        { t: 0.38, side: 1, dist: this.barrierDistance + 7.0, length: 45, depth: 8, height: 7.0, rows: 6, sponsor: 'MONTE CARLO', roofColor: 0x1e3a8a }
+      ];
     } else {
       // Robust spectator distribution for other circuits
       grandstandSpecs = [
@@ -1482,6 +1494,10 @@ export class Track {
         const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
 
         const wPos = new THREE.Vector3().copy(pt).addScaledVector(normal, -(this.barrierDistance + 4.5));
+        // Ensure block does not collide with track
+        const check = this.getClosestTrackPoint(wPos.x, wPos.z);
+        if (check.distance < (this.trackWidth / 2 + 2.5)) continue;
+
         const block = new THREE.Mesh(blockGeo, wallMat);
         block.position.set(wPos.x, pt.y + 2.75, wPos.z);
         block.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tgt);

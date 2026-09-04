@@ -353,7 +353,8 @@ export class PhysicsWorld {
     }
 
     // 9. GROUND RETENTION GUARANTEE (Lock vertical position to track surface)
-    body.position.y = 0.04;
+    const trackElev = (trackInfo && trackInfo.point && Number.isFinite(trackInfo.point.y)) ? trackInfo.point.y : 0;
+    body.position.y = trackElev + 0.04;
     body.velocity.y = 0;
     body.angularVelocity.x = 0;
     body.angularVelocity.z = 0;
@@ -367,7 +368,8 @@ export class PhysicsWorld {
   }
 
   resetVehicle(vehicle, x, y, z, yawAngle = 0, initialForwardSpeed = 0) {
-    vehicle.body.position.set(x, 0.04, z);
+    const validY = Number.isFinite(y) ? y : 0.04;
+    vehicle.body.position.set(x, validY, z);
     vehicle.body.velocity.set(0, 0, 0);
     vehicle.body.angularVelocity.set(0, 0, 0);
 

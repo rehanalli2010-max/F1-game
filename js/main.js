@@ -2250,8 +2250,19 @@ class F1Game {
     this.physics.step(dt);
 
     const pPos = this.playerVehicle.body.position;
-    const pQuat = this.playerVehicle.body.quaternion;
-    this.playerCar.setPositionAndRotation(pPos, pQuat);
+    let finalQuat = this.playerVehicle.body.quaternion;
+    if (this.track && typeof this.track.getClosestTrackPoint === 'function') {
+      const curTrackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z);
+      if (curTrackInfo && curTrackInfo.tangent && Number.isFinite(curTrackInfo.tangent.y)) {
+        const pitchAngle = -Math.asin(Math.max(-0.45, Math.min(0.45, curTrackInfo.tangent.y)));
+        if (!this._pitchQuat) this._pitchQuat = new THREE.Quaternion();
+        if (!this._combinedQuat) this._combinedQuat = new THREE.Quaternion();
+        this._pitchQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchAngle);
+        this._combinedQuat.copy(this.playerVehicle.body.quaternion).multiply(this._pitchQuat);
+        finalQuat = this._combinedQuat;
+      }
+    }
+    this.playerCar.setPositionAndRotation(pPos, finalQuat);
 
     const vel = this.playerVehicle.body.velocity;
     this._scratchFwd.set(0, 0, 1).applyQuaternion(this.playerCar.group.quaternion);
