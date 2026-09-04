@@ -162,21 +162,26 @@ export const TRACK_DATABASE = [
     },
     // Hamilton Straight, Abbey, Farm, The Loop, Aintree, Wellington, Brooklands, Luffield, Woodcote, Copse, Maggotts-Becketts-Chapel, Hangar Straight, Stowe, Club
     controlPoints: [
-      new THREE.Vector3(130, 0, -140),  // 0. Hamilton Straight Start/Finish
-      new THREE.Vector3(130, 0, 10),    // 1. Abbey Fast Right
-      new THREE.Vector3(115, 0, 80),    // 2. Farm Curve Left
-      new THREE.Vector3(80, 0, 125),    // 3. The Loop Tight Hairpin
-      new THREE.Vector3(30, 0, 140),    // 4. Aintree Corner
-      new THREE.Vector3(-30, 0, 130),   // 5. Wellington Straight
-      new THREE.Vector3(-90, 0, 100),   // 6. Brooklands Sweeper
-      new THREE.Vector3(-140, 0, 45),   // 7. Luffield Double Apex
-      new THREE.Vector3(-160, 0, -25),  // 8. Woodcote Acceleration
-      new THREE.Vector3(-145, 0, -90),  // 9. Copse High-Speed Right
-      new THREE.Vector3(-110, 0, -150), // 10. Maggotts Entry Flick
-      new THREE.Vector3(-65, 0, -185),  // 11. Becketts Chicane
-      new THREE.Vector3(-15, 0, -195),  // 12. Chapel Curve Exit
-      new THREE.Vector3(45, 0, -190),   // 13. Hangar Straight
-      new THREE.Vector3(95, 0, -180)    // 14. Stowe Corner & Vale/Club
+      new THREE.Vector3(110, 0, -130),  // 0. Hamilton Straight Start/Finish Line
+      new THREE.Vector3(110, 0, -30),   // 1. Hamilton Straight Acceleration
+      new THREE.Vector3(135, 0, 30),    // 2. Abbey High-Speed Right
+      new THREE.Vector3(115, 0, 75),    // 3. Farm Curve Left
+      new THREE.Vector3(65, 0, 95),     // 4. The Loop Tight Hairpin Entry
+      new THREE.Vector3(45, 0, 60),     // 5. The Loop Infield Hairpin Apex
+      new THREE.Vector3(15, 0, 15),     // 6. Aintree Corner
+      new THREE.Vector3(-45, 0, -35),   // 7. Wellington Straight Full Throttle
+      new THREE.Vector3(-105, 0, -85),  // 8. Wellington Straight Braking Point
+      new THREE.Vector3(-155, 0, -100), // 9. Brooklands Sweeper
+      new THREE.Vector3(-180, 0, -55),  // 10. Luffield Double-Apex Infield Loop
+      new THREE.Vector3(-155, 0, -10),  // 11. Woodcote Acceleration
+      new THREE.Vector3(-105, 0, 50),   // 12. National Straight to Copse
+      new THREE.Vector3(-45, 0, 105),   // 13. Copse Fast 290 km/h Blind Right
+      new THREE.Vector3(10, 0, 135),    // 14. Maggotts Fast Left Flick
+      new THREE.Vector3(50, 0, 140),    // 15. Becketts Chicane
+      new THREE.Vector3(85, 0, 115),    // 16. Chapel Curve Exit
+      new THREE.Vector3(140, 0, 45),    // 17. Hangar Straight Flat-Out
+      new THREE.Vector3(170, 0, -40),   // 18. Stowe Corner Heavy Braking Right
+      new THREE.Vector3(150, 0, -105)   // 19. Vale Chicane & Club Corner
     ]
   },
 
@@ -219,22 +224,26 @@ export const TRACK_DATABASE = [
     },
     // La Source Hairpin, downhill to Eau Rouge, Raidillon crest (+18m elevation), Kemmel Straight, Les Combes, Bruxelles, Pouhon, Blanchimont, Bus Stop
     controlPoints: [
-      new THREE.Vector3(140, 2, -150),  // 0. Start / Finish Straight
-      new THREE.Vector3(140, 0, -40),   // 1. La Source Hairpin Braking Zone
-      new THREE.Vector3(115, -3, 30),   // 2. La Source Hairpin Right Apex
-      new THREE.Vector3(70, -8, 80),    // 3. Downhill Plunge to Eau Rouge
-      new THREE.Vector3(20, -6, 120),   // 4. Eau Rouge Compression
-      new THREE.Vector3(-25, 8, 150),   // 5. Raidillon Blind Crest (Climbing)
-      new THREE.Vector3(-75, 14, 160),  // 6. Kemmel Straight Entry
-      new THREE.Vector3(-130, 16, 130), // 7. Kemmel Straight Midpoint
-      new THREE.Vector3(-170, 12, 80),  // 8. Les Combes Chicane
-      new THREE.Vector3(-180, 8, 15),   // 9. Malmedy & Bruxelles Downhill Hairpin
-      new THREE.Vector3(-160, 2, -45),  // 10. Pouhon Fast Double-Left
-      new THREE.Vector3(-120, 0, -110), // 11. Campus Corner
-      new THREE.Vector3(-70, 0, -165),  // 12. Stavelot Curve
-      new THREE.Vector3(-15, 0, -190),  // 13. Blanchimont High-Speed Sweeper
-      new THREE.Vector3(45, 0, -200),   // 14. Bus Stop Chicane Entry
-      new THREE.Vector3(100, 1, -185)   // 15. Bus Stop Exit onto Main Straight
+      new THREE.Vector3(80, 2, -140),   // 0. Start / Finish Line
+      new THREE.Vector3(80, 0, -50),    // 1. Pit Straight Braking into La Source
+      new THREE.Vector3(95, -2, 10),    // 2. La Source Hairpin Right Apex
+      new THREE.Vector3(70, -6, 50),    // 3. Downhill Acceleration to Eau Rouge
+      new THREE.Vector3(35, -12, 95),   // 4. Eau Rouge Valley Floor (Compression)
+      new THREE.Vector3(0, 4, 140),     // 5. Raidillon Steep Blind Climb (+16m)
+      new THREE.Vector3(-35, 20, 180),  // 6. Raidillon Crest (Summit +20m)
+      new THREE.Vector3(-75, 24, 235),  // 7. Kemmel Straight High-Speed Climb
+      new THREE.Vector3(-120, 26, 290), // 8. Kemmel Straight 330+ km/h
+      new THREE.Vector3(-165, 22, 310), // 9. Les Combes Chicane
+      new THREE.Vector3(-190, 16, 275), // 10. Malmedy Downhill Right
+      new THREE.Vector3(-175, 10, 205), // 11. Bruxelles Downhill Hairpin
+      new THREE.Vector3(-190, 5, 135),  // 12. No Name Corner
+      new THREE.Vector3(-215, 0, 55),   // 13. Pouhon Double-Apex Downhill Left
+      new THREE.Vector3(-200, -2, -25), // 14. Pouhon Exit Full Throttle
+      new THREE.Vector3(-165, -2, -90), // 15. Fagnes Right-Left Chicane
+      new THREE.Vector3(-120, -1, -150),// 16. Stavelot Banked Sweeper
+      new THREE.Vector3(-60, 0, -195),  // 17. Blanchimont High-Speed Left
+      new THREE.Vector3(15, 0, -210),   // 18. Blanchimont 2 Full Throttle
+      new THREE.Vector3(55, 1, -185)    // 19. Bus Stop Chicane
     ]
   },
 
@@ -277,22 +286,28 @@ export const TRACK_DATABASE = [
     },
     // Main Straight, First Corner, Technical S-Curves (1-4), Dunlop Curve, Degner 1 & 2, Hairpin, 200R, Spoon Curve, Back Straight, 130R, Casio Triangle
     controlPoints: [
-      new THREE.Vector3(115, 0, -150),  // 0. Main Straight Start/Finish
-      new THREE.Vector3(115, 0, -10),   // 1. First Corner Entry
-      new THREE.Vector3(95, 0, 60),     // 2. First Corner Right
-      new THREE.Vector3(65, 0, 110),    // 3. S-Curves Turn 1 (Left)
-      new THREE.Vector3(30, 0, 140),    // 4. S-Curves Turn 2 (Right)
-      new THREE.Vector3(-10, 0, 155),   // 5. S-Curves Turn 3 (Left)
-      new THREE.Vector3(-55, 0, 140),   // 6. Dunlop Sweeper
-      new THREE.Vector3(-95, 0, 100),   // 7. Degner 1 & 2
-      new THREE.Vector3(-135, 0, 45),   // 8. Hairpin Braking Zone
-      new THREE.Vector3(-150, 0, -10),  // 9. Hairpin Tight Apex
-      new THREE.Vector3(-130, 0, -70),  // 10. 200R Sweeper
-      new THREE.Vector3(-90, 0, -125),  // 11. Spoon Curve Entry
-      new THREE.Vector3(-45, 0, -165),  // 12. Spoon Curve Exit
-      new THREE.Vector3(15, 0, -195),   // 13. Back Straight Flat-Out
-      new THREE.Vector3(65, 0, -200),   // 14. 130R High-Speed Left
-      new THREE.Vector3(95, 0, -180)    // 15. Casio Triangle Chicane
+      new THREE.Vector3(90, 0, -130),   // 0. Main Straight Start/Finish
+      new THREE.Vector3(90, 0, -20),    // 1. Main Straight
+      new THREE.Vector3(80, 0, 45),     // 2. First Corner Entry
+      new THREE.Vector3(55, 0, 85),     // 3. Turn 2 Apex Right
+      new THREE.Vector3(25, 0, 105),    // 4. S-Curves Turn 3 (Left)
+      new THREE.Vector3(-5, 0, 125),    // 5. S-Curves Turn 4 (Right)
+      new THREE.Vector3(-30, 0, 110),   // 6. S-Curves Turn 5 (Left)
+      new THREE.Vector3(-45, 0, 80),    // 7. S-Curves Turn 6 (Right)
+      new THREE.Vector3(-75, 4, 50),    // 8. Dunlop Sweeper Uphill Left
+      new THREE.Vector3(-105, 5, 10),   // 9. Degner 1 Fast 90° Right
+      new THREE.Vector3(-110, 2, -25),  // 10. Degner 2 Underpass
+      new THREE.Vector3(-80, 0, -60),   // 11. Cross-Under Straight
+      new THREE.Vector3(-105, 0, -100), // 12. Hairpin Braking Zone
+      new THREE.Vector3(-135, 0, -80),  // 13. Hairpin Tight Apex (60 km/h)
+      new THREE.Vector3(-135, 3, -30),  // 14. 200R Sweeper Uphill Right
+      new THREE.Vector3(-95, 6, 10),    // 15. Crossover Overpass Bridge (+6m elevation)
+      new THREE.Vector3(-45, 4, 15),    // 16. Overpass Exit
+      new THREE.Vector3(-10, 2, -40),   // 17. Spoon Curve Entry
+      new THREE.Vector3(15, 0, -105),   // 18. Spoon Curve Double-Left
+      new THREE.Vector3(45, 0, -170),   // 19. Back Straight Flat-Out (310 km/h)
+      new THREE.Vector3(80, 0, -210),   // 20. 130R Supersonic Left
+      new THREE.Vector3(95, 0, -175)    // 21. Casio Triangle Chicane
     ]
   },
 
@@ -335,22 +350,25 @@ export const TRACK_DATABASE = [
     },
     // Pit Straight, Sheares Turn 1-2-3, Republic Blvd, Turn 5, Raffles Ave, Memorial Corner, Padang, Singapore Sling chicane, Esplanade, Bay Grandstand
     controlPoints: [
-      new THREE.Vector3(100, 0, -140),  // 0. Pit Straight Start/Finish
-      new THREE.Vector3(100, 0, -20),   // 1. Pit Straight
-      new THREE.Vector3(90, 0, 50),     // 2. Turn 1 (Sheares) Braking
-      new THREE.Vector3(65, 0, 100),    // 3. Turn 2 & 3 Switchback
-      new THREE.Vector3(25, 0, 135),    // 4. Republic Boulevard Straight
-      new THREE.Vector3(-25, 0, 150),   // 5. Turn 5 Fast Right
-      new THREE.Vector3(-75, 0, 135),   // 6. Raffles Avenue Sweeper
-      new THREE.Vector3(-120, 0, 95),   // 7. Turn 7 (Memorial Corner)
-      new THREE.Vector3(-145, 0, 40),   // 8. Stamford Road
-      new THREE.Vector3(-150, 0, -20),  // 9. Padang 90° Left
-      new THREE.Vector3(-130, 0, -75),  // 10. Singapore Sling Chicane
-      new THREE.Vector3(-95, 0, -130),  // 11. Anderson Bridge
-      new THREE.Vector3(-55, 0, -170),  // 12. Esplanade Drive
-      new THREE.Vector3(-10, 0, -195),  // 13. Marina Bay Grandstand Turns
-      new THREE.Vector3(45, 0, -190),   // 14. Floating Stadium Section
-      new THREE.Vector3(80, 0, -170)    // 15. Final Turns 22 & 23
+      new THREE.Vector3(90, 0, -120),   // 0. Pit Straight Start/Finish
+      new THREE.Vector3(90, 0, -10),    // 1. Pit Straight
+      new THREE.Vector3(75, 0, 45),     // 2. Sheares Turn 1 (Left)
+      new THREE.Vector3(50, 0, 65),     // 3. Sheares Turn 2 & 3 Switchback
+      new THREE.Vector3(10, 0, 50),     // 4. Republic Boulevard Straight
+      new THREE.Vector3(-40, 0, 50),    // 5. Turn 5 Fast 90° Right
+      new THREE.Vector3(-70, 0, 95),    // 6. Raffles Avenue Straight
+      new THREE.Vector3(-70, 0, 160),   // 7. Raffles Avenue Sweeper
+      new THREE.Vector3(-70, 0, 200),   // 8. Turn 7 (Memorial Corner) 90° Left
+      new THREE.Vector3(-120, 0, 200),  // 9. Stamford Road
+      new THREE.Vector3(-160, 0, 170),  // 10. Turn 8 (Padang) 90° Right
+      new THREE.Vector3(-160, 0, 90),   // 11. St. Andrew's Road Straight
+      new THREE.Vector3(-160, 0, 0),    // 12. Turn 9 (City Hall) 90° Left
+      new THREE.Vector3(-140, 0, -45),  // 13. Anderson Bridge Historic Squeeze
+      new THREE.Vector3(-105, 0, -65),  // 14. Turn 13 Tight Hairpin
+      new THREE.Vector3(-60, 0, -55),   // 15. Esplanade Waterfront Drive
+      new THREE.Vector3(-15, 0, -80),   // 16. Floating Stadium Promenade
+      new THREE.Vector3(25, 0, -115),   // 17. Marina Bay Grandstand Chicane
+      new THREE.Vector3(65, 0, -145)    // 18. Final Turn 22 & 23 Double-Apex
     ]
   },
 
@@ -393,22 +411,25 @@ export const TRACK_DATABASE = [
     },
     // Main Straight, Michael Schumacher Hairpin Turn 1, Turns 2-3 acceleration, Turn 4 downhill, Turns 9-10 lockup trap, Back Straight, Final turns
     controlPoints: [
-      new THREE.Vector3(125, 0, -150),  // 0. Oasis Main Straight Start/Finish
-      new THREE.Vector3(125, 0, 0),     // 1. DRS Zone 1
-      new THREE.Vector3(120, 0, 120),   // 2. Schumacher Turn 1 Braking
-      new THREE.Vector3(95, 0, 170),    // 3. Turn 1 Tight Right Apex
-      new THREE.Vector3(60, 0, 205),    // 4. Turns 2 & 3 Acceleration
-      new THREE.Vector3(10, 0, 220),    // 5. Turn 4 Wide Sweeper
-      new THREE.Vector3(-45, 0, 200),   // 6. Turns 5 & 6 High-Speed Flick
-      new THREE.Vector3(-95, 0, 160),   // 7. Turn 8 Tight Hairpin
-      new THREE.Vector3(-135, 0, 100),  // 8. Turns 9 & 10 Downhill Off-Camber Trap
-      new THREE.Vector3(-145, 0, 30),   // 9. Back Straight DRS Zone
-      new THREE.Vector3(-130, 0, -40),  // 10. Turn 11 Sweeper Right
-      new THREE.Vector3(-100, 0, -100), // 11. Turn 12 Uphill Sweeper
-      new THREE.Vector3(-60, 0, -155),  // 12. Turn 13 Heavy Braking
-      new THREE.Vector3(-10, 0, -195),  // 13. Back Acceleration Straight
-      new THREE.Vector3(45, 0, -210),   // 14. Turn 14 & 15 Final Sweeper
-      new THREE.Vector3(95, 0, -190)    // 15. Final Corner Exit onto Straight
+      new THREE.Vector3(120, 0, -140),  // 0. Oasis Main Straight Start/Finish
+      new THREE.Vector3(120, 0, -20),   // 1. DRS Zone 1
+      new THREE.Vector3(120, 0, 75),    // 2. Michael Schumacher Turn 1 Braking
+      new THREE.Vector3(95, 0, 125),    // 3. Turn 1 Tight Hairpin Right
+      new THREE.Vector3(60, 0, 135),    // 4. Turn 2 & 3 Switchback Acceleration
+      new THREE.Vector3(25, 2, 90),     // 5. Infield Acceleration Straight
+      new THREE.Vector3(5, 5, 40),      // 6. Turn 4 Wide Sweeping Uphill Right
+      new THREE.Vector3(-25, 6, 15),    // 7. Turn 4 Exit Crest
+      new THREE.Vector3(-60, 3, 20),    // 8. Turns 5-6-7 Downhill High-Speed S-Curves
+      new THREE.Vector3(-95, 0, 40),    // 9. Turn 7 Exit into Valley
+      new THREE.Vector3(-130, 0, 65),   // 10. Turn 8 Tight Right Hairpin
+      new THREE.Vector3(-145, -2, 10),  // 11. Turns 9 & 10 Downhill Blind Off-Camber Trap
+      new THREE.Vector3(-135, -3, -45), // 12. Turn 10 Tight Hairpin Apex
+      new THREE.Vector3(-105, 0, -110), // 13. Back Straight Flat-Out DRS Zone
+      new THREE.Vector3(-70, 0, -170),  // 14. Turn 11 Fast Uphill Left
+      new THREE.Vector3(-25, 3, -195),  // 15. Turn 12 Uphill Sweeper Right
+      new THREE.Vector3(25, 2, -185),   // 16. Turn 13 Heavy Braking Right
+      new THREE.Vector3(75, 0, -175),   // 17. Turns 14 & 15 Final Sweeper
+      new THREE.Vector3(105, 0, -155)   // 18. Final Corner Exit onto Oasis Straight
     ]
   },
 
@@ -451,22 +472,22 @@ export const TRACK_DATABASE = [
     },
     // Start Straight, Turn 1 (Niki Lauda Kurve), Steep Uphill to Turn 3 (Remus Hairpin, +16m elevation), Downhill Rauch Kurve, Würth Kurve, Rindt Kurve, Red Bull Mobile
     controlPoints: [
-      new THREE.Vector3(95, 0, -130),   // 0. Start / Finish Line
-      new THREE.Vector3(95, 2, -10),    // 1. Pit Straight
-      new THREE.Vector3(90, 5, 80),     // 2. Niki Lauda Kurve Braking
-      new THREE.Vector3(70, 8, 140),    // 3. Turn 1 90° Right Apex
-      new THREE.Vector3(35, 14, 190),   // 4. Steep Uphill Full Throttle Climb
-      new THREE.Vector3(-15, 18, 210),  // 5. Remus Hairpin Braking Zone (+18m)
-      new THREE.Vector3(-55, 16, 200),  // 6. Remus Hairpin Tight Apex (Peak)
-      new THREE.Vector3(-90, 10, 160),  // 7. Downhill Plunge Acceleration
-      new THREE.Vector3(-125, 4, 100),  // 8. Turn 4 (Schlossgold) Braking
-      new THREE.Vector3(-140, 1, 40),   // 9. Turn 5 Sweeper
-      new THREE.Vector3(-130, 0, -20),  // 10. Turn 6 Fast Left (Würth Kurve)
-      new THREE.Vector3(-100, 0, -80),  // 11. Turn 7 Rindt Kurve Apex
-      new THREE.Vector3(-60, 0, -130),  // 12. Turn 8 Acceleration
-      new THREE.Vector3(-15, 0, -170),  // 13. Turn 9 (Red Bull Mobile) Sweeper
-      new THREE.Vector3(40, 0, -175),   // 14. Turn 10 Final Corner
-      new THREE.Vector3(75, 0, -160)    // 15. Exit onto Front Straight
+      new THREE.Vector3(80, 0, -110),   // 0. Start / Finish Line
+      new THREE.Vector3(80, 2, -10),    // 1. Pit Straight
+      new THREE.Vector3(70, 5, 40),     // 2. Turn 1 (Niki Lauda Kurve) Uphill 90° Right
+      new THREE.Vector3(45, 9, 70),     // 3. Turn 1 Exit Full Throttle
+      new THREE.Vector3(15, 16, 120),   // 4. Steep Styrian Mountain Drag Climb
+      new THREE.Vector3(-20, 22, 175),  // 5. Steep Uphill Approach (+22m)
+      new THREE.Vector3(-55, 24, 205),  // 6. Turn 3 (Remus Hairpin) Peak Elevation (+24m)
+      new THREE.Vector3(-80, 23, 195),  // 7. Remus Hairpin Downhill Launch
+      new THREE.Vector3(-105, 16, 140), // 8. Steep Mountain Descent
+      new THREE.Vector3(-125, 10, 80),  // 9. Turn 4 (Schlossgold) Downhill Right
+      new THREE.Vector3(-120, 6, 25),   // 10. Schlossgold Exit
+      new THREE.Vector3(-95, 4, -25),   // 11. Turn 5 & 6 (Rauch Kurve) Fast Lefts
+      new THREE.Vector3(-60, 2, -65),   // 12. Würth Kurve
+      new THREE.Vector3(-25, 1, -95),   // 13. Turn 7 & 8 (Rindt Kurve) Double Right
+      new THREE.Vector3(15, 0, -120),   // 14. Turn 9 (Red Bull Mobile) Fast Sweeper
+      new THREE.Vector3(55, 0, -120)    // 15. Turn 10 Final Corner
     ]
   },
 
@@ -509,22 +530,29 @@ export const TRACK_DATABASE = [
     },
     // Senna S downhill left-right flick, Curva do Sol, Reta Oposta, Descida do Lago, Ferradura, Pinheirinho, Bico de Pato, Mergulho, Junção, Arquibancadas
     controlPoints: [
-      new THREE.Vector3(110, 0, -140),  // 0. Start / Finish Line
-      new THREE.Vector3(110, 0, 0),     // 1. Pit Straight
-      new THREE.Vector3(105, 0, 90),    // 2. Senna S Braking Zone
-      new THREE.Vector3(85, -4, 145),   // 3. Senna S Turn 1 Downhill Left
-      new THREE.Vector3(50, -6, 180),   // 4. Senna S Turn 2 Right Flick
-      new THREE.Vector3(0, -6, 195),    // 5. Curva do Sol Sweeping Left
-      new THREE.Vector3(-55, -4, 185),  // 6. Reta Oposta Straight
-      new THREE.Vector3(-105, -2, 150), // 7. Descida do Lago Corner
-      new THREE.Vector3(-140, 0, 95),   // 8. Ferradura Fast Right
-      new THREE.Vector3(-150, 2, 30),   // 9. Pinheirinho Infield Hairpin
-      new THREE.Vector3(-135, 3, -35),  // 10. Bico de Pato Tight Hairpin
-      new THREE.Vector3(-100, 2, -90),  // 11. Mergulho High-Speed Left
-      new THREE.Vector3(-60, 0, -145),  // 12. Junção Left Turn
-      new THREE.Vector3(-10, 2, -185),  // 13. Subida dos Boxes Uphill
-      new THREE.Vector3(45, 4, -195),   // 14. Arquibancadas Banked Sweeper
-      new THREE.Vector3(85, 2, -175)    // 15. Front Straight Approach
+      new THREE.Vector3(90, 2, -120),   // 0. Start / Finish Line (Driven Counter-Clockwise)
+      new THREE.Vector3(90, 0, -20),    // 1. Pit Straight
+      new THREE.Vector3(90, -2, 40),    // 2. Senna S Heavy Braking Point
+      new THREE.Vector3(75, -6, 95),    // 3. Senna S Turn 1 Downhill Left Drop
+      new THREE.Vector3(45, -8, 125),   // 4. Senna S Turn 2 Uphill Right Flick
+      new THREE.Vector3(10, -6, 105),   // 5. Senna S Exit
+      new THREE.Vector3(-25, -4, 80),   // 6. Curva do Sol Long Accelerating Left
+      new THREE.Vector3(-70, -2, 55),   // 7. Curva do Sol Exit onto Back Straight
+      new THREE.Vector3(-120, 0, 25),   // 8. Reta Oposta Straight Flat-Out
+      new THREE.Vector3(-170, 0, -15),  // 9. Reta Oposta Braking Zone
+      new THREE.Vector3(-200, -4, -50), // 10. Descida do Lago Turn 4 Downhill Left
+      new THREE.Vector3(-190, -6, -95), // 11. Descida do Lago Turn 5 Left
+      new THREE.Vector3(-155, -5, -135),// 12. Ferradura Fast Right Sweeper
+      new THREE.Vector3(-115, -3, -120),// 13. Ferradura Exit
+      new THREE.Vector3(-85, -1, -75),  // 14. Curva do Laranjinha Left
+      new THREE.Vector3(-75, 0, -35),   // 15. Pinheirinho Tight Infield Left
+      new THREE.Vector3(-55, 1, -15),   // 16. Bico de Pato Sharp Right Hairpin
+      new THREE.Vector3(-35, 1, -40),   // 17. Bico de Pato Exit
+      new THREE.Vector3(-40, -1, -85),  // 18. Mergulho Fast Downhill Left Dive
+      new THREE.Vector3(-25, 0, -135),  // 19. Junção Critical Uphill Left
+      new THREE.Vector3(15, 4, -165),   // 20. Subida dos Boxes Steep Amphitheater Climb
+      new THREE.Vector3(55, 5, -150),   // 21. Arquibancadas Banked Bowl Curve
+      new THREE.Vector3(80, 3, -135)    // 22. Final Acceleration to Front Straight
     ]
   },
 
@@ -567,22 +595,28 @@ export const TRACK_DATABASE = [
     },
     // Neftchilar Avenue (huge straight), Turn 1-2 90° Lefts, Government House, Turn 3-4, Narrow Castle Section (Turns 8-10, 7.6m width), High-speed sweepers 13-15
     controlPoints: [
-      new THREE.Vector3(135, 0, -180),  // 0. Neftchilar Avenue Start/Finish (350+ km/h straight)
-      new THREE.Vector3(135, 0, -40),   // 1. Neftchilar Avenue Midpoint
-      new THREE.Vector3(135, 0, 90),    // 2. Main Straight DRS End (Heavy Braking)
-      new THREE.Vector3(115, 0, 160),   // 3. Turn 1 90° Left Corner
-      new THREE.Vector3(75, 0, 195),    // 4. Turn 2 90° Left Corner
-      new THREE.Vector3(25, 0, 200),    // 5. Government House Straight
-      new THREE.Vector3(-30, 0, 185),   // 6. Turn 3 90° Left
-      new THREE.Vector3(-75, 0, 150),   // 7. Turn 4 90° Right
-      new THREE.Vector3(-115, 0, 100),  // 8. Turn 7 & Approach to Old Castle
-      new THREE.Vector3(-140, 2, 45),   // 9. Narrow Old City Wall (Icherisheher)
-      new THREE.Vector3(-145, 2, -15),  // 10. Castle Wall Chicane
-      new THREE.Vector3(-125, 0, -75),  // 11. Turn 12 Exit from Fortress
-      new THREE.Vector3(-90, 0, -135),  // 12. Turn 13 & 14 Acceleration Sweeper
-      new THREE.Vector3(-45, 0, -185),  // 13. Turn 15 Downhill Left
-      new THREE.Vector3(20, 0, -220),   // 14. Turn 16 onto Sea Promenade
-      new THREE.Vector3(85, 0, -215)    // 15. Turns 17-20 Flat-Out Acceleration onto Mega Straight
+      new THREE.Vector3(120, 0, -190),  // 0. Neftchilar Avenue Start/Finish (350+ km/h straight)
+      new THREE.Vector3(120, 0, -60),   // 1. Neftchilar Avenue Full Throttle
+      new THREE.Vector3(120, 0, 50),    // 2. Neftchilar Avenue DRS Zone
+      new THREE.Vector3(120, 0, 150),   // 3. Mega Straight Heavy Braking Zone
+      new THREE.Vector3(95, 0, 190),    // 4. Turn 1 90° Left Corner
+      new THREE.Vector3(55, 0, 190),    // 5. Short Street Straight
+      new THREE.Vector3(25, 0, 190),    // 6. Turn 2 90° Left Corner
+      new THREE.Vector3(25, 0, 135),    // 7. Government House Square Straight
+      new THREE.Vector3(25, 0, 75),     // 8. Turn 3 90° Left Corner
+      new THREE.Vector3(-10, 0, 75),    // 9. Turn 4 90° Right Corner
+      new THREE.Vector3(-10, 0, 130),   // 10. Street Straight
+      new THREE.Vector3(-45, 0, 130),   // 11. Turns 5 & 6 Chicane
+      new THREE.Vector3(-75, 0, 105),   // 12. Turn 7 & Approach to Old Castle
+      new THREE.Vector3(-100, 1, 60),   // 13. Medieval Fortress Wall Entrance
+      new THREE.Vector3(-115, 2, 20),   // 14. Turn 8-9 (Icherisheher Narrow Castle Squeeze)
+      new THREE.Vector3(-115, 3, -20),  // 15. Castle Tower Apex
+      new THREE.Vector3(-95, 2, -50),   // 16. Turn 11-12 Exit from Fortress
+      new THREE.Vector3(-65, 1, -85),   // 17. Turns 13 & 14 Acceleration Sweepers
+      new THREE.Vector3(-35, 0, -135),  // 18. Turn 15 Downhill Left
+      new THREE.Vector3(5, 0, -180),    // 19. Turn 16 onto Sea Promenade
+      new THREE.Vector3(45, 0, -215),   // 20. Turns 17-18 Full Throttle
+      new THREE.Vector3(85, 0, -220)    // 21. Turns 19-20 Blast joining the Mega Straight
     ]
   }
 ];
