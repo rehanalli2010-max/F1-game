@@ -6,17 +6,54 @@
   <title>Formula 1 Grand Prix 3D - Web Racing Simulator</title>
   <meta name="description" content="High-performance 3D Formula 1 web racing game built with Three.js and Cannon-es. Features realistic downforce physics, responsive arcade handling, F1 broadcast HUD, and session modes.">
   <link rel="stylesheet" href="css/style.css?v=400">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>">
 
-  <!-- PeerJS WebRTC P2P DataChannel Library -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- PeerJS WebRTC P2P DataChannel Library (Local zero-latency) -->
+  <script src="js/vendor/peerjs.min.js" defer></script>
 
-  <!-- Import Maps for Three.js and Cannon-es CDNs (Zero bundler required) -->
+  <!-- Local Server Protocol Guard: catches file:// protocol and assists with HTTP server launch -->
+  <script>
+    if (window.location.protocol === 'file:') {
+      console.warn('[F1 Game] Running over file:// protocol. ES Modules require an HTTP server.');
+      window.addEventListener('DOMContentLoaded', () => {
+        const warningBox = document.createElement('div');
+        warningBox.id = 'file-protocol-warning';
+        warningBox.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,7,12,0.95);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#fff;font-family:system-ui,sans-serif;text-align:center;';
+        warningBox.innerHTML = `
+          <div style="max-width:540px;background:#0d1117;border:2px solid #ff3b30;border-radius:12px;padding:32px;box-shadow:0 12px 40px rgba(0,0,0,0.8);">
+            <div style="font-size:42px;margin-bottom:12px;">🏎️ ⚠️</div>
+            <h2 style="font-size:22px;color:#ff3b30;margin:0 0 12px 0;letter-spacing:1px;text-transform:uppercase;">Local HTTP Server Required</h2>
+            <p style="font-size:14px;color:#c9d1d9;line-height:1.6;margin:0 0 20px 0;">
+              The F1 3D Racing Simulator uses ES6 modules and Web Workers which are blocked by browser security over <code>file://</code> URLs.
+            </p>
+            <div style="background:#161b22;padding:14px;border-radius:8px;font-family:monospace;font-size:13px;color:#58a6ff;margin-bottom:24px;">
+              Press <strong>F5</strong> in VS Code or run <strong>npm start</strong> in terminal
+            </div>
+            <div style="display:flex;gap:12px;justify-content:center;">
+              <a href="http://localhost:3000" style="display:inline-block;padding:12px 24px;background:#e10600;color:#fff;font-weight:700;font-size:14px;text-decoration:none;border-radius:6px;box-shadow:0 4px 14px rgba(225,6,0,0.4);">
+                Open http://localhost:3000
+              </a>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(warningBox);
+      });
+      // Attempt immediate redirection if localhost:3000 is active
+      setTimeout(() => {
+        const testImg = new Image();
+        testImg.onload = () => { window.location.href = 'http://localhost:3000'; };
+        testImg.src = 'http://localhost:3000/favicon.ico?' + Date.now();
+      }, 300);
+    }
+  </script>
+
+  <!-- Import Maps for Three.js and Cannon-es (Local Zero-Latency Bundler-Free) -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-      "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+      "three": "/js/vendor/three.module.min.js",
+      "three/addons/": "/js/vendor/three/addons/",
+      "cannon-es": "/js/vendor/cannon-es.js"
     }
   }
   </script>
@@ -41,39 +78,39 @@
         </div>
         <div class="session-badge">
           <div class="status-dot"></div>
-          <span id="session-badge-text">PRACTICE - FREE DRIVING</span>
+          <span id="session-badge-text" data-i18n="badge_practice_free">PRACTICE - FREE DRIVING</span>
         </div>
       </div>
 
       <!-- Mode Selector Pills -->
       <nav class="session-controls interactive" aria-label="Session Modes">
-        <button id="btn-mode-practice" class="session-btn active" title="Free Practice (Unlimited Laps)">
+        <button id="btn-mode-practice" class="session-btn active" title="Free Practice (Unlimited Laps)" data-i18n="nav_practice" data-i18n-title="nav_practice_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
           Practice
         </button>
-        <button id="btn-mode-qualifying" class="session-btn" title="One-Shot Qualifying (1 Flying Lap)">
+        <button id="btn-mode-qualifying" class="session-btn" title="One-Shot Qualifying (1 Flying Lap)" data-i18n="nav_qualifying" data-i18n-title="nav_qualifying_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
           Qualifying
         </button>
-        <button id="btn-mode-race" class="session-btn" title="Sprint Race (10-Car Grid)">
+        <button id="btn-mode-race" class="session-btn" title="Sprint Race (10-Car Grid)" data-i18n="nav_race" data-i18n-title="nav_race_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
           Sprint Race
         </button>
-        <button id="btn-mode-multiplayer" class="session-btn mp-btn" title="P2P Multiplayer via WebRTC">
+        <button id="btn-mode-multiplayer" class="session-btn mp-btn" title="P2P Multiplayer via WebRTC" data-i18n="nav_multiplayer" data-i18n-title="nav_multiplayer_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
           Multiplayer
         </button>
       </nav>
 
       <!-- Track Selector Dropdown / Modal Button -->
-      <button id="btn-track-select" class="track-select-btn interactive" title="Select Grand Prix Circuit">
+      <button id="btn-track-select" class="track-select-btn interactive" title="Select Grand Prix Circuit" data-i18n-title="select_track_title">
         <span class="track-btn-flag" id="track-btn-flag">🇮🇹</span>
         <span class="track-btn-name" id="track-btn-name">MONZA GP</span>
         <svg class="track-btn-arrow" viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
       </button>
 
       <!-- F1 Car & Constructor Selector Button -->
-      <button id="btn-car-select" class="car-select-btn interactive" title="Choose Your F1 Car & Constructor Livery">
+      <button id="btn-car-select" class="car-select-btn interactive" title="Choose Your F1 Car & Constructor Livery" data-i18n-title="select_car_title">
         <span class="car-btn-swatch" id="car-btn-swatch"></span>
         <span class="car-btn-name" id="car-btn-name">FERRARI</span>
         <svg class="car-btn-arrow" viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
@@ -81,25 +118,30 @@
 
       <!-- 3-Tier Difficulty Selector -->
       <div class="difficulty-controls interactive" id="difficulty-controls" aria-label="AI Difficulty">
-        <span class="diff-title">DIFFICULTY:</span>
-        <button class="diff-btn" data-diff="EASY" title="AI Overtakes, Accessible 82% Pace, Easy to Re-Overtake">EASY</button>
-        <button class="diff-btn active" data-diff="MEDIUM" title="Competitive 94% Pace, Clean Overtakes, Guards Apex">MEDIUM</button>
-        <button class="diff-btn" data-diff="HARD" title="Hardcore 100%+ Pace, Late Braking, Aggressive Blocking & Slipstream">HARD</button>
+        <span class="diff-title" data-i18n="diff_title">DIFFICULTY:</span>
+        <button class="diff-btn" data-diff="EASY" title="AI Overtakes, Accessible 82% Pace, Easy to Re-Overtake" data-i18n="diff_easy" data-i18n-title="diff_easy_title">EASY</button>
+        <button class="diff-btn active" data-diff="MEDIUM" title="Competitive 94% Pace, Clean Overtakes, Guards Apex" data-i18n="diff_medium" data-i18n-title="diff_medium_title">MEDIUM</button>
+        <button class="diff-btn" data-diff="HARD" title="Hardcore 100%+ Pace, Late Braking, Aggressive Blocking & Slipstream" data-i18n="diff_hard" data-i18n-title="diff_hard_title">HARD</button>
       </div>
 
       <!-- Utility Action Controls -->
       <div class="utility-controls interactive">
-        <button id="mute-btn" class="hud-icon-btn" title="Toggle Sound (M)">
+        <button id="lang-btn" class="lang-btn interactive" title="Change Language / Lingua" data-i18n-title="btn_lang_title">
+          <span class="lang-flag" id="lang-btn-flag">🇮🇹</span>
+          <span class="lang-code" id="lang-btn-code">IT</span>
+        </button>
+
+        <button id="mute-btn" class="hud-icon-btn" title="Toggle Sound (M)" data-i18n-title="btn_mute_title">
           <svg id="mute-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
           </svg>
         </button>
 
-        <button id="restart-btn" class="hud-action-btn" title="Restart Current Session (R)">
+        <button id="restart-btn" class="hud-action-btn" title="Restart Current Session (R)" data-i18n-title="btn_restart_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-          Restart
+          <span id="restart-text" data-i18n="btn_restart">Restart</span>
         </button>
-        <button id="help-btn" class="hud-icon-btn" title="Controls Guide (H)">
+        <button id="help-btn" class="hud-icon-btn" title="Controls Guide (H)" data-i18n-title="btn_help_title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
         </button>
       </div>
@@ -120,19 +162,19 @@
 
       <div class="timing-rows">
         <div class="timing-row">
-          <span class="timing-label">CURRENT</span>
+          <span class="timing-label" data-i18n="hud_current">CURRENT</span>
           <span class="timing-value current" id="timing-current">00:00.000</span>
         </div>
         <div class="timing-row">
-          <span class="timing-label">BEST</span>
+          <span class="timing-label" data-i18n="hud_best">BEST</span>
           <span class="timing-value best" id="timing-best">--:--.---</span>
         </div>
         <div class="timing-row">
-          <span class="timing-label">LAST</span>
+          <span class="timing-label" data-i18n="hud_last">LAST</span>
           <span class="timing-value last" id="timing-last">--:--.---</span>
         </div>
         <div class="timing-row">
-          <span class="timing-label">DELTA</span>
+          <span class="timing-label" data-i18n="hud_delta">DELTA</span>
           <span class="delta-badge faster" id="timing-delta">+0.000s</span>
         </div>
       </div>
@@ -156,9 +198,9 @@
       <!-- Live 10-Car Race Position Tower -->
       <div id="race-position-tower" class="race-position-tower">
         <div class="tower-header">
-          <span>POS</span>
-          <span>DRIVER</span>
-          <span>GAP</span>
+          <span data-i18n="hud_pos">POS</span>
+          <span data-i18n="hud_driver">DRIVER</span>
+          <span data-i18n="hud_gap">GAP</span>
         </div>
         <div id="position-tower-rows" class="position-tower-rows"></div>
       </div>
@@ -205,16 +247,15 @@
       <!-- Mini-map Radar (Bottom-Left) -->
       <div class="minimap-card">
         <div class="minimap-header">
-          <span>TRACK RADAR</span>
+          <span data-i18n="radar_title">TRACK RADAR</span>
           <span id="radar-track-title">MONZA GP</span>
         </div>
         <canvas id="minimap-canvas"></canvas>
       </div>
 
       <!-- Controls Hint (Bottom-Center) -->
-      <div class="controls-hint">
-        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>&uarr;</kbd><kbd>&larr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd> Drive</span>
-        <span><kbd>R</kbd> Reset</span>
+      <div class="controls-hint" id="controls-hint" data-i18n="controls_guide">
+        W A S D or Arrow Keys to Drive • R Reset • C Camera • Space Handbrake
       </div>
 
       <!-- Telemetry Cluster (Bottom-Right) -->
@@ -225,7 +266,7 @@
         <!-- Speed & Gear Display -->
         <div class="speed-gear-main">
           <div class="gear-container">
-            <span class="gear-label">GEAR</span>
+            <span class="gear-label" data-i18n="hud_gear">GEAR</span>
             <span class="gear-number" id="gear-value">1</span>
           </div>
           <div class="speed-container">
@@ -267,8 +308,8 @@
               <div class="pedal-fill brake" id="pedal-brake-fill"></div>
             </div>
           </div>
-          <div class="drs-badge" id="drs-badge">DRS</div>
-          <div class="drift-badge" id="drift-badge" style="display:none;">DRIFT</div>
+          <div class="drs-badge" id="drs-badge" data-i18n="hud_drs">DRS</div>
+          <div class="drift-badge" id="drift-badge" style="display:none;" data-i18n="hud_drift">DRIFT</div>
         </div>
       </div>
     </footer>
@@ -408,10 +449,10 @@
   <!-- Peer Disconnected Modal -->
   <div class="modal-backdrop" id="modal-peer-disconnected">
     <div class="modal-card">
-      <h2 class="modal-title" style="color: #f87171;">PEER DISCONNECTED</h2>
-      <p class="modal-subtitle">The connection to the other player was closed. Returning to single-player mode.</p>
+      <h2 class="modal-title" style="color: #f87171;" data-i18n="disc_modal_title">PEER DISCONNECTED</h2>
+      <p class="modal-subtitle" data-i18n="disc_modal_text">The connection to the other player was closed. Returning to single-player mode.</p>
       <div class="modal-actions">
-        <button id="btn-close-disconnect" class="modal-btn primary">Return to Practice</button>
+        <button id="btn-close-disconnect" class="modal-btn primary" data-i18n="disc_btn_close">Return to Practice</button>
       </div>
     </div>
   </div>
@@ -422,8 +463,8 @@
       <div class="track-modal-header">
         <div>
           <div class="track-modal-pretitle">FIA FORMULA 1 WORLD CHAMPIONSHIP</div>
-          <h2 class="modal-title">GRAND PRIX CALENDAR 2026</h2>
-          <p class="modal-subtitle">Select from 10 authentic circuits with procedural 3D splines, elevation profiles, and environmental themes.</p>
+          <h2 class="modal-title" data-i18n="track_modal_title">GRAND PRIX CALENDAR 2026</h2>
+          <p class="modal-subtitle" data-i18n="track_modal_subtitle">Select from 10 authentic circuits with procedural 3D splines, elevation profiles, and environmental themes.</p>
         </div>
         <button id="btn-close-track-select" class="track-modal-close-btn" title="Close">&times;</button>
       </div>
@@ -439,9 +480,9 @@
     <div class="modal-card car-modal-card">
       <div class="car-modal-header">
         <div>
-          <div class="car-modal-pretitle">FIA FORMULA 1 CONSTRUCTORS</div>
-          <h2 class="modal-title">CHOOSE YOUR F1 CAR &amp; TEAM</h2>
-          <p class="modal-subtitle">Select an official constructor to drive. Experience authentic liveries, factory power units, and technical aerodynamics.</p>
+          <div class="car-modal-pretitle" data-i18n="car_modal_subtitle">FIA FORMULA 1 CONSTRUCTORS</div>
+          <h2 class="modal-title" data-i18n="car_modal_title">CHOOSE YOUR F1 CAR &amp; TEAM</h2>
+          <p class="modal-subtitle" data-i18n="car_modal_subtitle">Select an official constructor to drive. Experience authentic liveries, factory power units, and technical aerodynamics.</p>
         </div>
         <button id="btn-close-car-select" class="car-modal-close-btn" title="Close">&times;</button>
       </div>
@@ -455,31 +496,31 @@
   <!-- 1. Qualifying Results Modal -->
   <div class="modal-backdrop" id="modal-qualifying">
     <div class="modal-card">
-      <h2 class="modal-title">QUALIFYING RESULTS</h2>
-      <p class="modal-subtitle">Official 1-Shot Flying Lap Classification</p>
+      <h2 class="modal-title" data-i18n="quali_modal_title">QUALIFYING RESULTS</h2>
+      <p class="modal-subtitle" data-i18n="quali_delta">Official 1-Shot Flying Lap Classification</p>
 
       <div class="result-hero-box">
         <div class="result-position-badge" id="quali-pos-text">P1</div>
         <div class="result-lap-time" id="quali-time-text">01:12.450</div>
-        <div class="result-delta" id="quali-delta-text">POLE POSITION!</div>
+        <div class="result-delta" id="quali-delta-text" data-i18n="quali_pole_text">POLE POSITION!</div>
       </div>
 
       <table class="leaderboard-table">
         <thead>
           <tr>
-            <th>POS</th>
-            <th>DRIVER</th>
+            <th data-i18n="hud_pos">POS</th>
+            <th data-i18n="hud_driver">DRIVER</th>
             <th>TEAM</th>
             <th>TIME</th>
-            <th>GAP</th>
+            <th data-i18n="hud_gap">GAP</th>
           </tr>
         </thead>
         <tbody id="quali-table-body"></tbody>
       </table>
 
       <div class="modal-actions">
-        <button id="btn-quali-retry" class="modal-btn">Retry Qualifying</button>
-        <button id="btn-quali-race" class="modal-btn primary">Start Race from this Grid</button>
+        <button id="btn-quali-retry" class="modal-btn" data-i18n="quali_btn_practice">Retry Qualifying</button>
+        <button id="btn-quali-race" class="modal-btn primary" data-i18n="quali_btn_race">Start Race from this Grid</button>
       </div>
     </div>
   </div>
@@ -487,8 +528,8 @@
   <!-- 2. Race Finish Modal -->
   <div class="modal-backdrop" id="modal-race-finish">
     <div class="modal-card">
-      <h2 class="modal-title" id="race-result-title">VICTORY! 1ST PLACE</h2>
-      <p class="modal-subtitle">Grand Prix Sprint Race Finished (10-Car Classification)</p>
+      <h2 class="modal-title" id="race-result-title" data-i18n="race_modal_title">VICTORY! 1ST PLACE</h2>
+      <p class="modal-subtitle" data-i18n="race_modal_subtitle">Grand Prix Sprint Race Finished (10-Car Classification)</p>
 
       <div class="result-hero-box">
         <div style="font-size: 13px; color: #94a3b8; letter-spacing: 1px;">TOTAL RACE TIME</div>
@@ -500,18 +541,18 @@
       <table class="leaderboard-table" style="margin-top: 14px;">
         <thead>
           <tr>
-            <th>POS</th>
-            <th>DRIVER</th>
+            <th data-i18n="hud_pos">POS</th>
+            <th data-i18n="hud_driver">DRIVER</th>
             <th>TEAM</th>
-            <th>GAP</th>
+            <th data-i18n="hud_gap">GAP</th>
           </tr>
         </thead>
         <tbody id="race-table-body"></tbody>
       </table>
 
       <div class="modal-actions">
-        <button id="btn-race-again" class="modal-btn primary">Race Again</button>
-        <button id="btn-race-practice" class="modal-btn">Return to Practice Menu</button>
+        <button id="btn-race-again" class="modal-btn primary" data-i18n="race_btn_restart">Race Again</button>
+        <button id="btn-race-practice" class="modal-btn" data-i18n="race_btn_practice">Return to Practice Menu</button>
       </div>
     </div>
   </div>
@@ -531,24 +572,24 @@
     </div>
   </div>
 
-  <!-- 3. Help & Controls Modal -->
+  <!-- 4. Help & Controls Modal -->
   <div class="modal-backdrop" id="modal-help">
     <div class="modal-card">
-      <h2 class="modal-title">RACE CONTROLS</h2>
+      <h2 class="modal-title" data-i18n="help_modal_title">RACE CONTROLS</h2>
       <p class="modal-subtitle">Formula 1 Prototype Phase 1 Guide</p>
 
       <table class="controls-table">
         <tr>
           <td><kbd>W</kbd> or <kbd>&uarr;</kbd></td>
-          <td>Throttle / Acceleration (8-Speed Transmission)</td>
+          <td data-i18n="help_key_gas">Throttle / Acceleration (8-Speed Transmission)</td>
         </tr>
         <tr>
           <td><kbd>S</kbd> or <kbd>&darr;</kbd></td>
-          <td>Carbon-Ceramic Brake / Reverse</td>
+          <td data-i18n="help_key_brake">Carbon-Ceramic Brake / Reverse</td>
         </tr>
         <tr>
           <td><kbd>A</kbd> / <kbd>D</kbd> or <kbd>&larr;</kbd> / <kbd>&rarr;</kbd></td>
-          <td>Speed-Sensitive Steering</td>
+          <td data-i18n="help_key_steer">Speed-Sensitive Steering</td>
         </tr>
         <tr>
           <td><kbd>TOUCH</kbd></td>
@@ -556,25 +597,43 @@
         </tr>
         <tr>
           <td><kbd>R</kbd></td>
-          <td>Reset Session / Teleport to Grid</td>
+          <td data-i18n="help_key_reset">Reset Session / Teleport to Grid</td>
         </tr>
         <tr>
           <td><kbd>M</kbd></td>
-          <td>Toggle Procedural Sound Mute / Unmute</td>
+          <td data-i18n="help_key_sound">Toggle Procedural Sound Mute / Unmute</td>
         </tr>
         <tr>
           <td><kbd>H</kbd></td>
-          <td>Toggle this Help Dialog</td>
+          <td data-i18n="help_key_help">Toggle this Help Dialog</td>
         </tr>
       </table>
 
       <div class="modal-actions">
-        <button id="btn-close-help" class="modal-btn primary">Back to Track</button>
+        <button id="btn-close-help" class="modal-btn primary" data-i18n="help_btn_close">Back to Track</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Language Selection Modal -->
+  <div class="modal-backdrop" id="modal-language">
+    <div class="modal-card lang-modal-card">
+      <div class="track-modal-header">
+        <div>
+          <div class="track-modal-pretitle" data-i18n="lang_modal_subtitle">LOCALIZATION ENGINE</div>
+          <h2 class="modal-title" data-i18n="lang_modal_title">SELECT LANGUAGE / SELEZIONA LINGUA</h2>
+          <p class="modal-subtitle" data-i18n="lang_modal_subtitle">AUTOMATIC REGIONAL DETECTION OR MANUAL SELECTION</p>
+        </div>
+        <button id="btn-close-lang" class="track-modal-close-btn" title="Close">&times;</button>
+      </div>
+
+      <div class="lang-grid" id="lang-grid-container">
+        <!-- Rendered dynamically by I18nManager: 7 supported languages with flags & regions -->
       </div>
     </div>
   </div>
 
   <!-- Main Game Script Entry Point -->
-  <script type="module" src="js/main.js?v=600"></script>
+  <script type="module" src="js/main.js?v=620"></script>
 </body>
 </html>

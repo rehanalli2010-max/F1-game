@@ -116,7 +116,12 @@ export class PhysicsWorld {
     const speedKmh = Math.abs(forwardSpeed) * 3.6;
 
     // Check if on track asphalt vs off-track grass/gravel
-    vehicle.isOnTrack = this.isOnTrackCallback ? this.isOnTrackCallback(body.position.x, body.position.z) : true;
+    const trackInfo = this.track && typeof this.track.getClosestTrackPoint === 'function'
+      ? this.track.getClosestTrackPoint(body.position.x, body.position.z)
+      : null;
+    vehicle.isOnTrack = trackInfo
+      ? (trackInfo.distance <= (this.track.trackWidth / 2))
+      : (this.isOnTrackCallback ? this.isOnTrackCallback(body.position.x, body.position.z) : true);
     
     // 100% MAXIMUM TRACTION CONTROL (Permanent & Unchangeable by user request)
     // Default 100% full traction locked at all times
@@ -299,7 +304,6 @@ export class PhysicsWorld {
 
     // 7. IMPENETRABLE SIDE BARRIER DEFLECTION & CONTAINMENT
     if (this.track && typeof this.track.getClosestTrackPoint === 'function') {
-      const trackInfo = this.track.getClosestTrackPoint(body.position.x, body.position.z);
       const barrierLimit = (this.track.barrierDistance || 11.5) - 0.85;
 
       if (trackInfo && trackInfo.distance > barrierLimit && trackInfo.point) {
@@ -364,18 +368,22 @@ export class PhysicsWorld {
    * Step physics simulation
    */
   step(dt) {
-    this.world.step(1 / 60, dt, 3);
+    this.world.step(1 / 60, dt, 5);
   }
 
   resetVehicle(vehicle, x, y, z, yawAngle = 0, initialForwardSpeed = 0) {
     const validY = Number.isFinite(y) ? y : 0.04;
     vehicle.body.position.set(x, validY, z);
+    if (vehicle.body.previousPosition) vehicle.body.previousPosition.set(x, validY, z);
+    if (vehicle.body.interpolatedPosition) vehicle.body.interpolatedPosition.set(x, validY, z);
     vehicle.body.velocity.set(0, 0, 0);
     vehicle.body.angularVelocity.set(0, 0, 0);
 
     const q = new CANNON.Quaternion();
     q.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), yawAngle);
     vehicle.body.quaternion.copy(q);
+    if (vehicle.body.previousQuaternion) vehicle.body.previousQuaternion.copy(q);
+    if (vehicle.body.interpolatedQuaternion) vehicle.body.interpolatedQuaternion.copy(q);
 
     if (initialForwardSpeed !== 0) {
       const forward = new CANNON.Vec3(0, 0, 1);

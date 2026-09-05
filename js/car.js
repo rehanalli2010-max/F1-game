@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { TextureFactory } from './textures.js';
-import { F1_TEAMS, getTeamById } from './teams_db.js';
+import { TextureFactory } from './textures.js?v=42';
+import { F1_TEAMS, getTeamById } from './teams_db.js?v=42';
 
 const _liveryCanvasCache = new Map();
 const _tireCompoundStripes = {
@@ -18,6 +18,23 @@ const _compoundNames = ['SOFT', 'MEDIUM', 'HARD'];
  * Other teams are unaffected and continue to use the procedural composite body.
  */
 const RED_BULL_GLB_PATH = 'assets/models/redbull.glb';
+
+/**
+ * Path to the optional external Mercedes GLB body.
+ * When this file exists, Mercedes cars load it in place of the procedural body
+ * while keeping the existing physics chassis, wheels, steering, AI and netcode.
+ * Other teams are unaffected and continue to use the procedural composite body.
+ */
+const MERCEDES_GLB_PATH = 'assets/models/mercedes.glb';
+
+/**
+ * Path to the custom Ferrari slot GLB body ("SCUDERIA NOVARA").
+ * When this file exists, cars in the Ferrari team slot load it in place of
+ * the procedural body while keeping the existing physics chassis, wheels,
+ * steering, suspension, AI and netcode completely unchanged.
+ * Other teams are unaffected and continue to use their respective models.
+ */
+const FERRARI_GLB_PATH = 'assets/models/ferrari.glb?v=6';
 
 /**
  * GLB body alignment constants.
@@ -64,23 +81,26 @@ function createClearcoatCarbonMaterial(baseColor, map = null) {
   carbonTex.repeat.set(8, 8);
 
   return new THREE.MeshPhysicalMaterial({
-    color: baseColor,
+    color: map ? 0xffffff : baseColor, // Critical: don't tint custom livery textures!
     map: map,
-    roughness: 0.25,
-    metalness: 0.1,
+    roughness: 0.22,
+    metalness: 0.15,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.08,
-    envMapIntensity: 1.5,
+    clearcoatRoughness: 0.06,
+    envMapIntensity: 1.6,
     normalMap: carbonTex,
-    normalScale: new THREE.Vector2(0.5, 0.5),
+    normalScale: new THREE.Vector2(0.2, 0.2),
   });
 }
 
+let _cachedMatteCarbonMat = null;
 /**
  * Creates matte checkered carbon-fiber material for aero elements
  * @returns {THREE.MeshPhysicalMaterial}
  */
 function createMatteCarbonMaterial() {
+  if (_cachedMatteCarbonMat) return _cachedMatteCarbonMat;
+
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 256;
@@ -102,7 +122,7 @@ function createMatteCarbonMaterial() {
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(8, 8);
 
-  return new THREE.MeshPhysicalMaterial({
+  _cachedMatteCarbonMat = new THREE.MeshPhysicalMaterial({
     map: tex,
     color: 0x1a1a1a,
     roughness: 0.85,
@@ -110,16 +130,23 @@ function createMatteCarbonMaterial() {
     clearcoat: 0.0,
     envMapIntensity: 0.3,
   });
+  return _cachedMatteCarbonMat;
 }
 
+const _tireMaterialCache = new Map();
 /**
- * Creates tire compound material with sidewall stripe
+ * Creates tire compound material with sidewall stripe (cached per compound)
  * @param {string} compound - 'SOFT' | 'MEDIUM' | 'HARD'
  * @param {string} teamColor - Team accent color for branding
  * @returns {Object} { tireMat, sidewallMat, stripeColor }
  */
 function createTireCompoundMaterials(compound, teamColor) {
-  const stripe = _tireCompoundStripes[compound] || _tireCompoundStripes.MEDIUM;
+  const compKey = compound || 'MEDIUM';
+  if (_tireMaterialCache.has(compKey)) {
+    return _tireMaterialCache.get(compKey);
+  }
+
+  const stripe = _tireCompoundStripes[compKey] || _tireCompoundStripes.MEDIUM;
 
   const tireRubberMat = new THREE.MeshPhysicalMaterial({
     color: 0x141416,
@@ -190,7 +217,9 @@ function createTireCompoundMaterials(compound, teamColor) {
     transparent: true,
   });
 
-  return { tireMat: tireRubberMat, sidewallMat, stripeColor: stripe.color };
+  const res = { tireMat: tireRubberMat, sidewallMat, stripeColor: stripe.color };
+  _tireMaterialCache.set(compKey, res);
+  return res;
 }
 
 /**
@@ -395,29 +424,140 @@ function drawRedBullPattern(ctx, primary, secondary, accent) {
 }
 
 function drawMercedesPattern(ctx, primary, secondary, accent) {
-  // Silver Arrows: cyan pinstripes with black accents
-  ctx.fillStyle = '#00f0ff';
-  ctx.fillRect(0, 180, 1024, 6);
-  ctx.fillRect(0, 332, 1024, 6);
-  ctx.fillStyle = accent;
-  ctx.fillRect(0, 186, 1024, 12);
-  ctx.fillRect(0, 314, 1024, 12);
+  // Premium fictional F1 design: Metallic silver body with carbon black accents and electric teal highlights
+  // Base silver with subtle metallic flake
+  const silverGrad = ctx.createLinearGradient(0, 0, 0, 512);
+  silverGrad.addColorStop(0.0, '#c8ccd0');
+  silverGrad.addColorStop(0.3, '#b8bcc0');
+  silverGrad.addColorStop(0.5, '#a8acb0');
+  silverGrad.addColorStop(0.7, '#b8bcc0');
+  silverGrad.addColorStop(1.0, '#c8ccd0');
+  ctx.fillStyle = silverGrad;
+  ctx.fillRect(0, 0, 1024, 512);
 
-  // Star pattern on engine cover
-  ctx.fillStyle = '#00f0ff';
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const x = 512 + Math.cos(angle) * 80;
-    const y = 256 + Math.sin(angle) * 80;
-    ctx.beginPath();
-    ctx.moveTo(x, y - 8);
-    ctx.lineTo(x + 2, y + 2);
-    ctx.lineTo(x - 7, y + 2);
-    ctx.lineTo(x + 5, y - 3);
-    ctx.lineTo(x - 5, y - 3);
-    ctx.closePath();
-    ctx.fill();
+  // Metallic flake
+  for (let i = 0; i < 5000; i++) {
+    const g = 180 + Math.random() * 75;
+    ctx.fillStyle = `rgba(${g},${g},${g + 10},0.06)`;
+    ctx.fillRect(Math.random() * 1024, Math.random() * 512, 2, 2);
   }
+
+  // Carbon fiber black lower body / sidepod undertray
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 360, 1024, 152);
+
+  // Carbon weave pattern on lower section
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  const tileSize = 8;
+  for (let y = 360; y < 512; y += tileSize) {
+    for (let x = 0; x < 1024; x += tileSize) {
+      const isDiagonal = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+      ctx.fillStyle = isDiagonal ? '#1a1f25' : '#080b0e';
+      ctx.fillRect(x, y, tileSize, tileSize);
+    }
+  }
+  ctx.restore();
+
+  // Electric teal/cyan aerodynamic pinstripes along spine
+  const tealGrad = ctx.createLinearGradient(0, 180, 1024, 332);
+  tealGrad.addColorStop(0.0, '#00f0ff');
+  tealGrad.addColorStop(0.5, '#00d4e0');
+  tealGrad.addColorStop(1.0, '#00b8c4');
+  ctx.fillStyle = tealGrad;
+  ctx.fillRect(0, 180, 1024, 3);
+  ctx.fillRect(0, 332, 1024, 3);
+
+  // Secondary thin carbon pinstripe
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 183, 1024, 2);
+  ctx.fillRect(0, 329, 1024, 2);
+
+  // Geometric futuristic pattern on engine cover (center area)
+  ctx.save();
+  ctx.translate(512, 256);
+  const accentGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 120);
+  accentGrad.addColorStop(0.0, 'rgba(0,240,255,0.15)');
+  accentGrad.addColorStop(0.5, 'rgba(0,240,255,0.05)');
+  accentGrad.addColorStop(1.0, 'rgba(0,240,255,0.0)');
+  ctx.fillStyle = accentGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 220, 90, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Angular geometric accents - front section
+  ctx.fillStyle = '#00f0ff';
+  ctx.globalAlpha = 0.7;
+  // Front left geometric element
+  ctx.beginPath();
+  ctx.moveTo(100, 200);
+  ctx.lineTo(180, 180);
+  ctx.lineTo(200, 220);
+  ctx.lineTo(120, 240);
+  ctx.closePath();
+  ctx.fill();
+  // Front right geometric element
+  ctx.beginPath();
+  ctx.moveTo(824, 200);
+  ctx.lineTo(904, 180);
+  ctx.lineTo(924, 220);
+  ctx.lineTo(844, 240);
+  ctx.closePath();
+  ctx.fill();
+  // Rear left geometric element
+  ctx.beginPath();
+  ctx.moveTo(100, 292);
+  ctx.lineTo(180, 272);
+  ctx.lineTo(200, 312);
+  ctx.lineTo(120, 332);
+  ctx.closePath();
+  ctx.fill();
+  // Rear right geometric element
+  ctx.beginPath();
+  ctx.moveTo(824, 292);
+  ctx.lineTo(904, 272);
+  ctx.lineTo(924, 312);
+  ctx.lineTo(844, 332);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+
+  // Aerodynamic vortex generator stripes on sidepods (carbon black with teal edge)
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(180, 210, 60, 4);
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(180, 210, 60, 1);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(784, 210, 60, 4);
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(784, 210, 60, 1);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(180, 302, 60, 4);
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(180, 302, 60, 1);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(784, 302, 60, 4);
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(784, 302, 60, 1);
+
+  // Nose tip electric teal accent
+  ctx.fillStyle = '#00f0ff';
+  ctx.beginPath();
+  ctx.moveTo(980, 220);
+  ctx.lineTo(1024, 200);
+  ctx.lineTo(1024, 312);
+  ctx.lineTo(980, 292);
+  ctx.closePath();
+  ctx.fill();
+
+  // Glossy lacquer highlight on upper surfaces
+  const gloss = ctx.createLinearGradient(0, 0, 0, 180);
+  gloss.addColorStop(0.0, 'rgba(255,255,255,0.22)');
+  gloss.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+  gloss.addColorStop(1.0, 'rgba(255,255,255,0.0)');
+  ctx.fillStyle = gloss;
+  ctx.fillRect(0, 0, 1024, 180);
 }
 
 function drawMcLarenPattern(ctx, primary, secondary, accent) {
@@ -675,7 +815,7 @@ export class F1Car {
       lastImpactTime: 0
     };
     this.tireCompound = this.options.tireCompound || 'MEDIUM';
-    this.teamId = this.options.teamId || null;
+    this.teamId = this.options.teamId || this.options.id || null;
 
     this.buildCar();
     this.initSmokeParticles();
@@ -698,7 +838,7 @@ export class F1Car {
     if (teamOptions.name || teamOptions.teamName) this.teamName = teamOptions.name || teamOptions.teamName;
     if (teamOptions.driverName) this.driverName = teamOptions.driverName;
     if (teamOptions.haloColor !== undefined) this.haloColor = teamOptions.haloColor;
-    if (teamOptions.teamId) this.teamId = teamOptions.teamId;
+    if (teamOptions.teamId || teamOptions.id) this.teamId = teamOptions.teamId || teamOptions.id;
 
     // Safely remove and dispose all previous visual body meshes
     this._clearGlbBody();
@@ -726,26 +866,39 @@ export class F1Car {
     const accentHex = this.accentHex;
     const carNumber = this.carNumber;
 
-    // Red Bull uses a dedicated flowing navy/red/yellow livery generator
+    // Red Bull uses dedicated flowing navy/red/yellow livery suite
     const isRedBull = (this.teamName && this.teamName.toLowerCase().includes('red bull')) ||
-                      (primaryHex === '#03102c' && secondaryHex && secondaryHex.toLowerCase() === '#fcd700');
+                      (this.teamId === 'redbull') ||
+                      (primaryHex === '#03102c' || primaryHex === '#0b1a3a');
+
+    // Mercedes uses dedicated premium silver/black/teal livery suite
+    const isMercedes = (this.teamName && this.teamName.toLowerCase().includes('mercedes')) ||
+                       (this.teamId === 'mercedes') ||
+                       (primaryHex === '#b8bcc0');
+
+    // Ferrari slot uses dedicated custom F1 model & livery (Scuderia Novara)
+    const isFerrari = (this.teamId === 'ferrari') ||
+                      (this.teamName && (this.teamName.toLowerCase().includes('ferrari') || this.teamName.toLowerCase().includes('novara')));
 
     this._isRedBull = isRedBull;
+    this._isMercedes = isMercedes;
+    this._isFerrari = isFerrari;
     this._proceduralBodyMeshes = [];
 
-    // Generate procedural livery texture using new system
-    let liveryTex;
-    if (isRedBull) {
-      liveryTex = TextureFactory.createRedBullLiveryTexture(carNumber);
-    } else if (teamData) {
-      liveryTex = generateProceduralLivery(teamData, carNumber);
-    } else {
-      liveryTex = TextureFactory.createCarLiveryTexture(primaryHex, secondaryHex, accentHex, carNumber);
-    }
+    // Generate comprehensive team livery suite
+    const teamPayload = teamData
+      ? { ...teamData, id: teamData.id || teamData.teamId, teamId: teamData.teamId || teamData.id }
+      : (this.teamId || (isRedBull ? 'redbull' : null));
+    const liverySuite = TextureFactory.getTeamLiverySuite(teamPayload, carNumber);
 
     // 2. PBR MATERIALS
     // Chassis: Clearcoat carbon-fiber finish
-    const bodyMat = createClearcoatCarbonMaterial(this.primaryColor, liveryTex);
+    const bodyMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.bodyTex);
+    const noseMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.noseTex);
+    const sidepodLeftMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.sidepodLeftTex);
+    const sidepodRightMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.sidepodRightTex);
+    const drsMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.drsTex);
+    const finMat = createClearcoatCarbonMaterial(this.primaryColor, liverySuite.finTex);
 
     // Aero elements: Matte checkered carbon-fiber
     const matteCarbonMat = createMatteCarbonMaterial();
@@ -763,7 +916,7 @@ export class F1Car {
     // Halo material
     const haloMat = new THREE.MeshPhysicalMaterial({
       map: TextureFactory.createCarbonFiberTexture(256, 256),
-      color: this.haloColor !== undefined ? this.haloColor : 0x2a2a2a,
+      color: isRedBull ? 0x03102c : (this.haloColor !== undefined ? this.haloColor : 0x2a2a2a),
       roughness: 0.35,
       metalness: 0.85,
       clearcoat: 0.3,
@@ -774,18 +927,21 @@ export class F1Car {
     const intakeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
 
     // 1. NOSECONE & MAIN CHASSIS
-    // Nosecone (tapered wedge)
+    // Nosecone (tapered wedge with authentic front number & nose graphics)
     const noseGeo = new THREE.ConeGeometry(0.38, 2.0, 5);
     noseGeo.rotateX(Math.PI / 2);
     noseGeo.scale(1.2, 0.45, 1.0);
-    const noseMesh = new THREE.Mesh(noseGeo, bodyMat);
+    const noseMesh = new THREE.Mesh(noseGeo, noseMat);
     noseMesh.position.set(0, 0.25, 1.6);
     noseMesh.castShadow = true;
     this.visualBody.add(noseMesh);
 
-    // Front Nose Tip (camera pod)
+    // Front Nose Tip (yellow camera pod for Red Bull, carbon for others)
     const noseTipGeo = new THREE.BoxGeometry(0.2, 0.1, 0.3);
-    const noseTipMesh = new THREE.Mesh(noseTipGeo, matteCarbonMat);
+    const noseTipMat = isRedBull
+      ? new THREE.MeshPhysicalMaterial({ color: 0xffd400, roughness: 0.2, metalness: 0.1, clearcoat: 1.0 })
+      : matteCarbonMat;
+    const noseTipMesh = new THREE.Mesh(noseTipGeo, noseTipMat);
     noseTipMesh.position.set(0, 0.22, 2.65);
     this.visualBody.add(noseTipMesh);
 
@@ -796,16 +952,16 @@ export class F1Car {
     tubMesh.castShadow = true;
     this.visualBody.add(tubMesh);
 
-    // Sidepods (Left & Right aerodynamic cooling pods)
+    // Sidepods (Left & Right aerodynamic cooling pods with dedicated outward-facing livery)
     const sidepodGeo = new THREE.BoxGeometry(0.42, 0.38, 1.6);
-    // Left sidepod
-    const leftSidepod = new THREE.Mesh(sidepodGeo, bodyMat);
+    // Left sidepod: material index 1 is -X (outer left face)
+    const leftSidepod = new THREE.Mesh(sidepodGeo, [bodyMat, sidepodLeftMat, bodyMat, matteCarbonMat, intakeMat, bodyMat]);
     leftSidepod.position.set(-0.52, 0.28, 0.1);
     leftSidepod.castShadow = true;
     this.visualBody.add(leftSidepod);
 
-    // Right sidepod
-    const rightSidepod = new THREE.Mesh(sidepodGeo, bodyMat);
+    // Right sidepod: material index 0 is +X (outer right face)
+    const rightSidepod = new THREE.Mesh(sidepodGeo, [sidepodRightMat, bodyMat, bodyMat, matteCarbonMat, intakeMat, bodyMat]);
     rightSidepod.position.set(0.52, 0.28, 0.1);
     rightSidepod.castShadow = true;
     this.visualBody.add(rightSidepod);
@@ -834,7 +990,7 @@ export class F1Car {
     airboxHole.position.set(0, 0.68, 0.36);
     this.visualBody.add(airboxHole);
 
-    // Shark Fin
+    // Shark Fin (with team badge & bull graphic)
     const finShape = new THREE.Shape();
     finShape.moveTo(0, 0);
     finShape.lineTo(0, 0.42);
@@ -844,11 +1000,10 @@ export class F1Car {
     const extrudeSettings = { depth: 0.04, bevelEnabled: false };
     const finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
     finGeo.rotateY(Math.PI / 2);
-    const finMesh = new THREE.Mesh(finGeo, matteCarbonMat);
+    const finMesh = new THREE.Mesh(finGeo, finMat);
     finMesh.position.set(0.02, 0.58, -1.35);
     this.visualBody.add(finMesh);
 
-    // 2. COCKPIT & DRIVER
     // Cockpit opening cutout
     const cockpitCutout = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.75), matteCarbonMat);
     cockpitCutout.position.set(0, 0.48, 0.45);
@@ -857,7 +1012,7 @@ export class F1Car {
     // Driver Helmet with team matching accent color
     const helmetGeo = new THREE.SphereGeometry(0.16, 16, 16);
     const helmetMat = new THREE.MeshPhysicalMaterial({
-      color: this.accentColor || (this.isPlayer ? 0xffe600 : 0x00f0ff),
+      color: isRedBull ? 0x03102c : (this.accentColor || (this.isPlayer ? 0xffe600 : 0x00f0ff)),
       roughness: 0.2,
       metalness: 0.3,
       clearcoat: 1.0,
@@ -923,9 +1078,10 @@ export class F1Car {
     this.rearWingMesh.castShadow = true;
     this.visualBody.add(this.rearWingMesh);
 
-    // Rear Wing Upper DRS Flap
+    // Rear Wing Upper DRS Flap (with high-res sponsor banner facing backwards towards chase cam and forward)
     const drsFlapGeo = new THREE.BoxGeometry(1.4, 0.03, 0.22);
-    const drsFlap = new THREE.Mesh(drsFlapGeo, accentMat);
+    const drsFlapMat = [accentMat, accentMat, drsMat, matteCarbonMat, drsMat, drsMat];
+    const drsFlap = new THREE.Mesh(drsFlapGeo, drsFlapMat);
     drsFlap.position.set(0, 0.94, -1.82);
     drsFlap.rotation.x = -0.15;
     this.visualBody.add(drsFlap);
@@ -973,8 +1129,20 @@ export class F1Car {
     this.rainLight.position.set(0, 0.16, -1.9);
     this.visualBody.add(this.rainLight);
 
-    if (this._isRedBull) {
-      this._scheduleGlbBodySwap();
+    // Dedicated external GLB body loader
+    // Custom F1 3D model for the Ferrari team slot ("SCUDERIA NOVARA")
+    // Applied ONLY to the Ferrari team slot; other teams continue using their respective models.
+    if (this._isFerrari) {
+      this._scheduleGlbBodySwap(FERRARI_GLB_PATH);
+    }
+
+    // Only activated if an external model without duplicate wheels is supplied
+    const ENABLE_EXTERNAL_GLB = false;
+    if (this._isRedBull && ENABLE_EXTERNAL_GLB) {
+      this._scheduleGlbBodySwap(RED_BULL_GLB_PATH);
+    }
+    if (this._isMercedes && ENABLE_EXTERNAL_GLB) {
+      this._scheduleGlbBodySwap(MERCEDES_GLB_PATH);
     }
   }
 
@@ -992,9 +1160,9 @@ export class F1Car {
     }
   }
 
-  _scheduleGlbBodySwap() {
+  _scheduleGlbBodySwap(glbPath) {
     const requestId = ++this._glbSwapRequestId;
-    loadGltfModelAsync(RED_BULL_GLB_PATH).then((gltfRoot) => {
+    loadGltfModelAsync(glbPath).then((gltfRoot) => {
       if (requestId !== this._glbSwapRequestId) {
         gltfRoot.traverse((obj) => {
           if (obj.geometry) obj.geometry.dispose();
@@ -1005,7 +1173,31 @@ export class F1Car {
         });
         return;
       }
-      if (!this._isRedBull) {
+      // Verify team still matches the GLB being loaded
+      const isFerrariGlb = glbPath === FERRARI_GLB_PATH;
+      const isRedBullGlb = glbPath === RED_BULL_GLB_PATH;
+      const isMercedesGlb = glbPath === MERCEDES_GLB_PATH;
+      if (isFerrariGlb && !this._isFerrari) {
+        gltfRoot.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        return;
+      }
+      if (isRedBullGlb && !this._isRedBull) {
+        gltfRoot.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        return;
+      }
+      if (isMercedesGlb && !this._isMercedes) {
         gltfRoot.traverse((obj) => {
           if (obj.geometry) obj.geometry.dispose();
           if (obj.material) {
@@ -1016,12 +1208,23 @@ export class F1Car {
         return;
       }
 
+      const isGlbWheelPart = (obj) => {
+        let cur = obj;
+        while (cur && cur !== gltfRoot) {
+          const n = (cur.name || '').toLowerCase();
+          if (HIDE_GLB_MESH_PREFIXES.some((p) => n.startsWith(p) || n.includes(p))) return true;
+          cur = cur.parent;
+        }
+        return false;
+      };
+
       gltfRoot.traverse((obj) => {
         if (obj.isMesh) {
-          obj.castShadow = true;
-          obj.receiveShadow = true;
-          if (obj.name && HIDE_GLB_MESH_PREFIXES.some((p) => obj.name.toLowerCase().startsWith(p))) {
+          if (isGlbWheelPart(obj)) {
             obj.visible = false;
+          } else {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
           }
         }
       });
@@ -1042,19 +1245,24 @@ export class F1Car {
 
       this._clearGlbBody();
       this._glbRoot = gltfRoot;
-      this.visualBody.add(gltfRoot);
 
       this.visualBody.traverse((obj) => {
         if (obj.isMesh && obj !== this.rainLight) {
           obj.visible = false;
         }
       });
+
+      this.visualBody.add(gltfRoot);
+
       gltfRoot.traverse((obj) => {
-        if (obj.isMesh) obj.visible = true;
+        if (obj.isMesh && !isGlbWheelPart(obj)) {
+          obj.visible = true;
+        }
       });
     }).catch((err) => {
       if (requestId !== this._glbSwapRequestId) return;
-      console.warn('[F1Car] Red Bull GLB not loaded, using procedural body:', err && err.message ? err.message : err);
+      const teamName = glbPath === FERRARI_GLB_PATH ? 'Ferrari' : (glbPath === RED_BULL_GLB_PATH ? 'Red Bull' : 'Mercedes');
+      console.warn(`[F1Car] ${teamName} GLB not loaded, using procedural body:`, err && err.message ? err.message : err);
     });
   }
 

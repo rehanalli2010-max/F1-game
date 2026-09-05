@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { F1Car } from './car.js?v=29';
+import { F1Car } from './car.js?v=32';
 
 /**
  * 10-Driver Authentic Grand Prix Roster

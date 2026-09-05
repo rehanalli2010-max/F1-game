@@ -1,16 +1,17 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { AudioManager } from './audio.js?v=40';
-import { F1Car } from './car.js?v=29';
-import { PhysicsWorld } from './physics.js?v=60';
-import { Track } from './circuit.js?v=320';
-import { TimingSystem } from './timing.js?v=350';
-import { SessionManager, SESSION_TYPES } from './session.js?v=350';
-import { AIGridManager } from './ai.js?v=450';
-import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=300';
-import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=400';
-import { F1_TEAMS, getTeamById } from './teams_db.js?v=100';
-import { EffectsManager } from './fx.js?v=50';
+import { AudioManager } from './audio.js?v=41';
+import { F1Car } from './car.js?v=32';
+import { PhysicsWorld } from './physics.js?v=62';
+import { Track } from './circuit.js?v=321';
+import { TimingSystem } from './timing.js?v=351';
+import { SessionManager, SESSION_TYPES } from './session.js?v=351';
+import { AIGridManager } from './ai.js?v=451';
+import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=301';
+import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=401';
+import { F1_TEAMS, getTeamById } from './teams_db.js?v=101';
+import { EffectsManager } from './fx.js?v=51';
+import { i18n, SUPPORTED_LANGUAGES } from './i18n.js';
 
 /**
  * Main Application Orchestrator for Phase 4 3D F1 Racing Game with P2P Multiplayer
@@ -18,6 +19,8 @@ import { EffectsManager } from './fx.js?v=50';
 class F1Game {
   constructor() {
     window.game = this;
+    this.i18n = i18n;
+    this.i18n.addListener((lang) => this.onLanguageChanged(lang));
     this.canvas = document.getElementById('webgl-canvas');
     this.clock = new THREE.Clock();
     this.currentTrackId = 'monza';
@@ -60,6 +63,7 @@ class F1Game {
     this.initInputs();
     this.initMobileControls();
     this.initUI();
+    this.i18n.updateDOM();
     this.initNetwork();
 
     // Start rendering
@@ -809,20 +813,26 @@ class F1Game {
       const behindDist = 6.2;
       const heightDist = 2.2 + (speedKmh / 350) * 0.4;
 
-      this.cameraTargetPos.copy(effPos)
-        .addScaledVector(effForward, -behindDist)
-        .setComponent(1, effPos.y + heightDist);
-
-      this.camera.position.lerp(this.cameraTargetPos, Math.min(1, dt * 8.5));
-
-      // Smooth cinematic lookahead point (eliminates sharp camera snapping during turns)
-      this.cameraLookTarget.copy(effPos).addScaledVector(effForward, 3.8).setComponent(1, effPos.y + 0.9);
-      if (this.smoothLookAt.lengthSq() < 0.1) {
-        this.smoothLookAt.copy(this.cameraLookTarget);
-      } else {
-        this.smoothLookAt.lerp(this.cameraLookTarget, Math.min(1, dt * 10.0));
+      // Smooth camera heading (yaw) so camera swings around corners smoothly
+      // while maintaining a rock-solid, locked distance along the car's forward axis
+      // (eliminates forward-backward distance rubber-banding & acceleration vibration)
+      if (!this._smoothCameraForward) {
+        this._smoothCameraForward = new THREE.Vector3().copy(effForward);
       }
-      this.camera.lookAt(this.smoothLookAt);
+      const headingFollowSpeed = Math.min(1.0, dt * 9.0);
+      this._smoothCameraForward.lerp(effForward, headingFollowSpeed).normalize();
+
+      // Lock camera position relative to car along smoothed heading
+      this.camera.position.copy(effPos)
+        .addScaledVector(this._smoothCameraForward, -behindDist);
+      this.camera.position.y = effPos.y + heightDist;
+
+      // Smooth lookahead point along the car's smoothed direction
+      this.cameraLookTarget.copy(effPos)
+        .addScaledVector(this._smoothCameraForward, 4.0);
+      this.cameraLookTarget.y = effPos.y + 0.9;
+
+      this.camera.lookAt(this.cameraLookTarget);
 
     } else if (this.cameraMode === 'COCKPIT') {
       // Driver Helmet / Halo Perspective
@@ -926,9 +936,17 @@ class F1Game {
     const helpBtn = document.getElementById('help-btn');
     if (helpBtn) helpBtn.addEventListener('click', () => this.toggleHelpModal());
 
+    const langBtn = document.getElementById('lang-btn');
+    if (langBtn) langBtn.addEventListener('click', () => this.openLanguageModal());
+
     // Modal buttons
     const closeHelp = document.getElementById('btn-close-help');
     if (closeHelp) closeHelp.addEventListener('click', () => this.toggleHelpModal(false));
+
+    const closeLang = document.getElementById('btn-close-lang');
+    if (closeLang) closeLang.addEventListener('click', () => this.closeModals());
+
+    this.initLanguageSelectorUI();
 
     const qRetry = document.getElementById('btn-quali-retry');
     if (qRetry) qRetry.addEventListener('click', () => {
@@ -1302,11 +1320,49 @@ class F1Game {
     const container = document.getElementById('center-alert-container');
     if (!container) return;
 
+    // Translate standard alert messages if i18n is available
+    let displayText = text;
+    if (this.i18n) {
+      if (text === 'LIGHTS OUT AND AWAY WE GO!') {
+        displayText = this.i18n.t('alert_lights_out');
+      } else if (text === 'FLYING LAP ACTIVE - MAXIMUM ATTACK!') {
+        displayText = this.i18n.t('alert_flying_lap');
+      } else if (text === 'PRACTICE SESSION - FREE DRIVING') {
+        displayText = this.i18n.t('alert_practice_start');
+      } else if (text === 'OUT-LAP APPROACH - PREPARE FOR HOT LAP') {
+        displayText = this.i18n.t('alert_out_lap');
+      } else if (text === 'JUMP START PENALTY (+5.0s)') {
+        displayText = this.i18n.t('alert_jump_start');
+      } else if (text === 'LAP INVALIDATED - CHECKPOINTS MISSED') {
+        displayText = this.i18n.t('alert_lap_invalidated');
+      } else if (text === 'FINAL LAP!') {
+        displayText = this.i18n.t('alert_final_lap');
+      } else if (text === 'WRONG WAY!') {
+        displayText = this.i18n.t('alert_wrong_way');
+      } else if (text === 'REVERSE ACROSS START LINE PROHIBITED') {
+        displayText = this.i18n.t('alert_reverse_prohibited');
+      } else if (text.startsWith('CIRCUIT LOADED: ')) {
+        const name = text.replace('CIRCUIT LOADED: ', '');
+        displayText = this.i18n.t('alert_circuit_loaded', { name });
+      } else if (text.startsWith('CAR SELECTED: ')) {
+        const team = text.replace('CAR SELECTED: ', '');
+        displayText = this.i18n.t('alert_car_selected', { team });
+      } else if (text.startsWith('CHECKERED FLAG! WINNER: ')) {
+        const winner = text.replace('CHECKERED FLAG! WINNER: ', '');
+        displayText = this.i18n.t('alert_checkered_flag', { winner });
+      } else if (text.startsWith('AI DIFFICULTY: ')) {
+        const diff = text.replace('AI DIFFICULTY: ', '');
+        displayText = this.i18n.t('alert_ai_diff', { diff });
+      } else if (this.i18n.t(text) !== text) {
+        displayText = this.i18n.t(text);
+      }
+    }
+
     // Clear previous
     container.innerHTML = '';
     const alertBox = document.createElement('div');
     alertBox.className = `center-alert visible ${cssClass}`;
-    alertBox.textContent = text;
+    alertBox.textContent = displayText;
     container.appendChild(alertBox);
 
     setTimeout(() => {
@@ -1316,8 +1372,28 @@ class F1Game {
   }
 
   updateSessionBadge(mode, status) {
+    let display = `${mode} - ${status}`;
+
+    if (this.i18n) {
+      if (mode === 'PRACTICE' && (status === 'FREE DRIVING' || status === 'SOLO TRACK RUN')) {
+        display = this.i18n.t('badge_practice_free');
+      } else if (mode === 'QUALIFYING' && (status === 'OUT-LAP APPROACH' || status === 'OUT-LAP')) {
+        display = this.i18n.t('badge_quali_outlap');
+      } else if (mode === 'QUALIFYING' && status.includes('HOT LAP')) {
+        display = this.i18n.t('badge_quali_hotlap');
+      } else if (mode === 'RACE' && status.includes('GRID')) {
+        display = this.i18n.t('badge_race_grid');
+      } else if (status.startsWith('LAP ')) {
+        const lapParts = status.replace('LAP ', '').split('/');
+        if (lapParts.length === 2) {
+          const modeName = this.i18n.t(`nav_${mode.toLowerCase()}`) || mode;
+          display = `${modeName.toUpperCase()} - ${this.i18n.t('badge_lap', { current: lapParts[0], total: lapParts[1] })}`;
+        }
+      }
+    }
+
     const badgeText = document.getElementById('session-badge-text');
-    if (badgeText) badgeText.textContent = `${mode} - ${status}`;
+    if (badgeText) badgeText.textContent = display;
     const lapCounter = document.getElementById('hud-lap-counter');
     if (lapCounter) {
       lapCounter.textContent = status;
@@ -1912,9 +1988,13 @@ class F1Game {
 
   updateHUDDriverBadge(team) {
     const numEl = document.getElementById('hud-driver-number');
+    const nameEl = document.getElementById('hud-driver-name');
     const pill = document.getElementById('hud-driver-pill');
     if (numEl) {
       numEl.textContent = team.driverNumber;
+    }
+    if (nameEl && this.i18n) {
+      nameEl.textContent = this.i18n.t('hud_driver');
     }
     if (pill) {
       pill.style.borderLeft = `3px solid ${team.primaryHex}`;
@@ -2143,6 +2223,82 @@ class F1Game {
     }
   }
 
+  toggleLanguageModal(force) {
+    const modal = document.getElementById('modal-language');
+    if (!modal) return;
+    this.updateLanguageSelectorUI();
+    if (force !== undefined) {
+      if (force) modal.classList.add('active');
+      else modal.classList.remove('active');
+    } else {
+      modal.classList.toggle('active');
+    }
+  }
+
+  openLanguageModal() {
+    this.toggleLanguageModal(true);
+  }
+
+  initLanguageSelectorUI() {
+    this.updateLanguageSelectorUI();
+  }
+
+  updateLanguageSelectorUI() {
+    const container = document.getElementById('lang-grid-container');
+    if (!container || !this.i18n) return;
+
+    container.innerHTML = '';
+    const currentLang = this.i18n.getCurrentLanguage();
+    const autoLang = this.i18n.autoDetectedLang;
+
+    Object.values(SUPPORTED_LANGUAGES).forEach(lang => {
+      const card = document.createElement('div');
+      const isActive = lang.code === currentLang;
+      const isAuto = lang.code === autoLang;
+      card.className = `lang-card ${isActive ? 'active' : ''}`;
+      card.setAttribute('data-lang', lang.code);
+
+      const activeTag = isActive ? `<span class="lang-active-tag">${this.i18n.t('lang_active', {}, 'ACTIVE')}</span>` : '';
+      const autoTag = isAuto ? `<span class="lang-auto-tag">${this.i18n.t('lang_auto_badge', {}, 'AUTO')}</span>` : '';
+
+      card.innerHTML = `
+        <div class="lang-card-flag">${lang.flag}</div>
+        <div class="lang-card-info">
+          <div class="lang-card-name">${lang.name}</div>
+          <div class="lang-card-region">${lang.region}</div>
+        </div>
+        <div class="lang-badge-container">
+          ${activeTag}
+          ${autoTag}
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        this.i18n.setLanguage(lang.code);
+        this.closeModals();
+        this.showCenterAlert(`${lang.flag} ${lang.name.toUpperCase()}`, 1600);
+      });
+
+      container.appendChild(card);
+    });
+
+    const flagEl = document.getElementById('lang-btn-flag');
+    const codeEl = document.getElementById('lang-btn-code');
+    const meta = this.i18n.getLanguageMeta();
+    if (flagEl) flagEl.textContent = meta.flag;
+    if (codeEl) codeEl.textContent = meta.code.toUpperCase();
+  }
+
+  onLanguageChanged(lang) {
+    this.updateLanguageSelectorUI();
+    this.initTrackSelectorUI();
+    this.initCarSelectorUI();
+    const currentTeam = getTeamById(this.currentTeamId);
+    if (currentTeam) {
+      this.updateHUDDriverBadge(currentTeam);
+    }
+  }
+
   closeModals() {
     document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
   }
@@ -2249,16 +2405,24 @@ class F1Game {
     this.physics.updateVehicle(this.playerVehicle, this.controls, dt, this.audio);
     this.physics.step(dt);
 
-    const pPos = this.playerVehicle.body.position;
-    let finalQuat = this.playerVehicle.body.quaternion;
+    // Use Cannon-es physics interpolated position & quaternion to ensure silky-smooth rendering
+    const pPos = (this.playerVehicle.body.interpolatedPosition && Number.isFinite(this.playerVehicle.body.interpolatedPosition.x))
+      ? this.playerVehicle.body.interpolatedPosition
+      : this.playerVehicle.body.position;
+    let finalQuat = (this.playerVehicle.body.interpolatedQuaternion && Number.isFinite(this.playerVehicle.body.interpolatedQuaternion.x))
+      ? this.playerVehicle.body.interpolatedQuaternion
+      : this.playerVehicle.body.quaternion;
+
     if (this.track && typeof this.track.getClosestTrackPoint === 'function') {
       const curTrackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z);
       if (curTrackInfo && curTrackInfo.tangent && Number.isFinite(curTrackInfo.tangent.y)) {
-        const pitchAngle = -Math.asin(Math.max(-0.45, Math.min(0.45, curTrackInfo.tangent.y)));
+        const targetPitchAngle = -Math.asin(Math.max(-0.45, Math.min(0.45, curTrackInfo.tangent.y)));
+        if (!Number.isFinite(this._smoothPitchAngle)) this._smoothPitchAngle = targetPitchAngle;
+        this._smoothPitchAngle += (targetPitchAngle - this._smoothPitchAngle) * Math.min(1.0, dt * 12.0);
         if (!this._pitchQuat) this._pitchQuat = new THREE.Quaternion();
         if (!this._combinedQuat) this._combinedQuat = new THREE.Quaternion();
-        this._pitchQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchAngle);
-        this._combinedQuat.copy(this.playerVehicle.body.quaternion).multiply(this._pitchQuat);
+        this._pitchQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), this._smoothPitchAngle);
+        this._combinedQuat.copy(finalQuat).multiply(this._pitchQuat);
         finalQuat = this._combinedQuat;
       }
     }
