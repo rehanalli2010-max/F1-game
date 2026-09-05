@@ -1237,6 +1237,24 @@ export class Track {
         // Casino Square Viewing Terrace
         { t: 0.38, side: 1, dist: this.barrierDistance + 7.0, length: 45, depth: 8, height: 7.0, rows: 6, sponsor: 'MONTE CARLO', roofColor: 0x1e3a8a }
       ];
+    } else if (this.trackData.id === 'silverstone') {
+      // Bespoke Silverstone Circuit Grandstands tailored to authentic layout with guaranteed zero clipping
+      grandstandSpecs = [
+        // 1. Hamilton Straight Main Grandstand (Overlooking starting grid & pit lane)
+        { t: 0.975, side: -1, dist: this.barrierDistance + 14.0, length: 90, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        // 2. Abbey Grandstand (Outside Turn 1 high-speed sweeper)
+        { t: 0.05, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        // 3. Wellington Straight Grandstand (DRS overtaking zone)
+        { t: 0.25, side: 1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
+        // 4. Luffield Complex Stadium Grandstand (Overlooking carousel and Woodcote exit)
+        { t: 0.38, side: -1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'BRITISH GP', roofColor: 0x1e3a8a },
+        // 5. Copse Corner Grandstand (Overlooking 290 km/h blind right entry)
+        { t: 0.505, side: -1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'ARAMCO', roofColor: 0x008080 },
+        // 6. Becketts Stadium Grandstand (Iconic high-speed chicane viewing)
+        { t: 0.61, side: 1, dist: this.barrierDistance + 16.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 },
+        // 7. Stowe Corner Grandstand (End of Hangar Straight heavy braking arena)
+        { t: 0.825, side: 1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
+      ];
     } else {
       // Robust spectator distribution for other circuits
       grandstandSpecs = [
@@ -1260,8 +1278,13 @@ export class Track {
    * Guaranteed ZERO intersection with the track surface.
    */
   buildPitComplex() {
-    const pt = this.curve.getPointAt(0.04);
-    const tgt = this.curve.getTangentAt(0.04).normalize();
+    const isMonaco = this.trackData.id === 'monaco';
+    const isSilverstone = this.trackData.id === 'silverstone';
+    // Monaco GP has a compact street circuit; center pit complex along straight (t = 0.095)
+    // Silverstone Wing sits along Hamilton straight centered at t = 0.015
+    const pitT = isMonaco ? 0.095 : (isSilverstone ? 0.015 : 0.04);
+    const pt = this.curve.getPointAt(pitT);
+    const tgt = this.curve.getTangentAt(pitT).normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
 
@@ -1284,12 +1307,13 @@ export class Track {
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.6 });
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.5, metalness: 0.7 });
 
-    const bLen = 130;
+    const bLen = isMonaco ? 110 : 130;
     const bHeight = 8.5;
-    const bDepth = 16;
+    const bDepth = isMonaco ? 15 : 16;
+    const wallApronLen = bLen + (isMonaco ? 12 : 20);
 
     // 1. Pit Lane Apron Roadway (Runs parallel to track between pit wall and garage doors)
-    const apronGeo = new THREE.PlaneGeometry(bLen + 20, 8.0);
+    const apronGeo = new THREE.PlaneGeometry(wallApronLen, 8.0);
     apronGeo.rotateX(-Math.PI / 2);
     const apron = new THREE.Mesh(apronGeo, concreteMat);
     apron.position.set(0, 0.03, 3.5);
@@ -1297,14 +1321,14 @@ export class Track {
 
     // Speed limit line along the pit lane edge
     const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-    const yLineGeo = new THREE.PlaneGeometry(bLen + 20, 0.25);
+    const yLineGeo = new THREE.PlaneGeometry(wallApronLen, 0.25);
     yLineGeo.rotateX(-Math.PI / 2);
     const yLine = new THREE.Mesh(yLineGeo, yellowLineMat);
     yLine.position.set(0, 0.035, -0.4);
     pitGroup.add(yLine);
 
     // 2. Concrete Pit Wall separating track barrier from pit lane
-    const pitWallGeo = new THREE.BoxGeometry(bLen + 20, 1.1, 0.6);
+    const pitWallGeo = new THREE.BoxGeometry(wallApronLen, 1.1, 0.6);
     const pitWall = new THREE.Mesh(pitWallGeo, wallMat);
     pitWall.position.set(0, 0.55, -0.8);
     pitGroup.add(pitWall);
@@ -1315,7 +1339,9 @@ export class Track {
     const screenGeo = new THREE.BoxGeometry(1.2, 0.7, 0.05);
     const screenMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
 
-    for (let p = -50; p <= 50; p += 25) {
+    const perchSpan = bLen - 30;
+    for (let i = 0; i < 5; i++) {
+      const p = -perchSpan / 2 + i * (perchSpan / 4);
       const perchGroup = new THREE.Group();
       const perch = new THREE.Mesh(perchGeo, metalMat);
       perch.position.set(0, 0.9, 0);
@@ -1345,9 +1371,10 @@ export class Track {
     pitGroup.add(vipGallery);
 
     // 4. 10 Team Garage Doors on Front Wall (facing pit lane at z = 7.4)
-    const shutterGeo = new THREE.BoxGeometry(8.8, 4.0, 0.15);
+    const shutterWidth = isMonaco ? 7.6 : 8.8;
+    const shutterGeo = new THREE.BoxGeometry(shutterWidth, 4.0, 0.15);
     const teamNames = [
-      'FERRARI', 'RED BULL', 'MERCEDES', 'MCLAREN', 'ASTON MARTIN',
+      'FERRARI', 'ORION RACING', 'MERCEDES', 'MCLAREN', 'ASTON MARTIN',
       'ALPINE', 'WILLIAMS', 'HAAS', 'SAUBER', 'RB'
     ];
     const teamColors = [
@@ -1355,8 +1382,12 @@ export class Track {
       '#0090ff', '#52e0ff', '#b6babd', '#00e700', '#6692ff'
     ];
 
+    const garageSpan = bLen - 20;
+    const garageSpacing = garageSpan / 9;
+    const startGx = -garageSpan / 2;
+
     for (let g = 0; g < 10; g++) {
-      const gx = -54 + g * 12.0;
+      const gx = startGx + g * garageSpacing;
 
       // Shutter door
       const shutter = new THREE.Mesh(shutterGeo, shutterMat);
@@ -1380,19 +1411,20 @@ export class Track {
 
       const signTex = new THREE.CanvasTexture(signCanvas);
       const signMat = new THREE.MeshBasicMaterial({ map: signTex });
-      const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 1.4), signMat);
+      const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(shutterWidth * 0.95, 1.4), signMat);
       signMesh.position.set(gx, 4.4, 7.42);
       signMesh.rotation.y = Math.PI; // Face towards the pit lane
       pitGroup.add(signMesh);
 
       // Pit Stop Box on Apron (Red/Yellow box where car stops)
       const boxMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+      const boxHalfW = shutterWidth * 0.4;
       const boxPts = [
-        new THREE.Vector3(gx - 3.5, 0.04, 1.5),
-        new THREE.Vector3(gx + 3.5, 0.04, 1.5),
-        new THREE.Vector3(gx + 3.5, 0.04, 5.5),
-        new THREE.Vector3(gx - 3.5, 0.04, 5.5),
-        new THREE.Vector3(gx - 3.5, 0.04, 1.5)
+        new THREE.Vector3(gx - boxHalfW, 0.04, 1.5),
+        new THREE.Vector3(gx + boxHalfW, 0.04, 1.5),
+        new THREE.Vector3(gx + boxHalfW, 0.04, 5.5),
+        new THREE.Vector3(gx - boxHalfW, 0.04, 5.5),
+        new THREE.Vector3(gx - boxHalfW, 0.04, 1.5)
       ];
       const boxGeo = new THREE.BufferGeometry().setFromPoints(boxPts);
       const pitBoxLine = new THREE.Line(boxGeo, boxMat);

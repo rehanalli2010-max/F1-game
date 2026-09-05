@@ -88,13 +88,9 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
           Practice
         </button>
-        <button id="btn-mode-qualifying" class="session-btn" title="One-Shot Qualifying (1 Flying Lap)" data-i18n="nav_qualifying" data-i18n-title="nav_qualifying_title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-          Qualifying
-        </button>
-        <button id="btn-mode-race" class="session-btn" title="Sprint Race (10-Car Grid)" data-i18n="nav_race" data-i18n-title="nav_race_title">
+        <button id="btn-mode-race" class="session-btn" title="Race (10-Car Grid)" data-i18n="nav_race" data-i18n-title="nav_race_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
-          Sprint Race
+          Race
         </button>
         <button id="btn-mode-multiplayer" class="session-btn mp-btn" title="P2P Multiplayer via WebRTC" data-i18n="nav_multiplayer" data-i18n-title="nav_multiplayer_title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
@@ -255,7 +251,7 @@
 
       <!-- Controls Hint (Bottom-Center) -->
       <div class="controls-hint" id="controls-hint" data-i18n="controls_guide">
-        W A S D or Arrow Keys to Drive • R Reset • C Camera • Space Handbrake
+        W A S D or Arrow Keys to Drive • R Reset • Space Handbrake
       </div>
 
       <!-- Telemetry Cluster (Bottom-Right) -->
@@ -352,7 +348,7 @@
   </div>
 
   <!-- ========================================================================
-       MODAL OVERLAYS: QUALIFYING RESULTS, RACE FINISH, HELP
+       MODAL OVERLAYS: RACE FINISH, HELP, MULTIPLAYER
        ======================================================================== -->
 
   <!-- -1. P2P WebRTC Multiplayer Lobby Modal -->
@@ -395,8 +391,7 @@
             <label class="mp-label">SESSION FORMAT</label>
             <select id="mp-select-mode" class="mp-select">
               <option value="PRACTICE">Practice Session (Free Track Running)</option>
-              <option value="QUALIFYING">One-Shot Qualifying (Ghost Hot Lap)</option>
-              <option value="RACE" selected>Sprint Race (20 Laps • 10-Car Grid)</option>
+              <option value="RACE" selected>Race (20 Laps • 10-Car Grid)</option>
             </select>
           </div>
 
@@ -438,7 +433,7 @@
               <li><strong>Car #1:</strong> Host Player (Scuderia Red)</li>
               <li><strong>Car #2:</strong> Guest Player (Cyan Racing)</li>
               <li><strong>Cars #3-10:</strong> 8 AI Opponents synced by Host</li>
-              <li><strong>Ghost Mode:</strong> Active in Qualifying to prevent griefing</li>
+              <li><strong>Fair Racing:</strong> Full 10-car synced grid across circuits</li>
             </ul>
           </div>
         </div>
@@ -493,43 +488,11 @@
     </div>
   </div>
 
-  <!-- 1. Qualifying Results Modal -->
-  <div class="modal-backdrop" id="modal-qualifying">
-    <div class="modal-card">
-      <h2 class="modal-title" data-i18n="quali_modal_title">QUALIFYING RESULTS</h2>
-      <p class="modal-subtitle" data-i18n="quali_delta">Official 1-Shot Flying Lap Classification</p>
-
-      <div class="result-hero-box">
-        <div class="result-position-badge" id="quali-pos-text">P1</div>
-        <div class="result-lap-time" id="quali-time-text">01:12.450</div>
-        <div class="result-delta" id="quali-delta-text" data-i18n="quali_pole_text">POLE POSITION!</div>
-      </div>
-
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th data-i18n="hud_pos">POS</th>
-            <th data-i18n="hud_driver">DRIVER</th>
-            <th>TEAM</th>
-            <th>TIME</th>
-            <th data-i18n="hud_gap">GAP</th>
-          </tr>
-        </thead>
-        <tbody id="quali-table-body"></tbody>
-      </table>
-
-      <div class="modal-actions">
-        <button id="btn-quali-retry" class="modal-btn" data-i18n="quali_btn_practice">Retry Qualifying</button>
-        <button id="btn-quali-race" class="modal-btn primary" data-i18n="quali_btn_race">Start Race from this Grid</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. Race Finish Modal -->
+  <!-- Race Finish Modal -->
   <div class="modal-backdrop" id="modal-race-finish">
     <div class="modal-card">
       <h2 class="modal-title" id="race-result-title" data-i18n="race_modal_title">VICTORY! 1ST PLACE</h2>
-      <p class="modal-subtitle" data-i18n="race_modal_subtitle">Grand Prix Sprint Race Finished (10-Car Classification)</p>
+      <p class="modal-subtitle" data-i18n="race_modal_subtitle">Grand Prix Race Finished (10-Car Classification)</p>
 
       <div class="result-hero-box">
         <div style="font-size: 13px; color: #94a3b8; letter-spacing: 1px;">TOTAL RACE TIME</div>
@@ -634,6 +597,6 @@
   </div>
 
   <!-- Main Game Script Entry Point -->
-  <script type="module" src="js/main.js?v=620"></script>
+  <script type="module" src="js/main.js?v=631"></script>
 </body>
 </html>

@@ -134,8 +134,8 @@ export const TRACK_DATABASE = [
     laps: 20,
     difficultyRating: 'High',
     difficultyScore: 4,
-    lengthMeters: 1980,
-    characteristics: 'High-Speed Sweepers • Maggotts & Becketts Complex • Airfield Flow',
+    lengthMeters: 2278,
+    characteristics: 'Hamilton Straight • Maggotts & Becketts Complex • High-Speed Airfield Flow',
     trackWidth: 16.5,
     barrierDistance: 12.0,
     theme: {
@@ -160,28 +160,38 @@ export const TRACK_DATABASE = [
         fogDensity: 0.0007
       }
     },
-    // Hamilton Straight, Abbey, Farm, The Loop, Aintree, Wellington, Brooklands, Luffield, Woodcote, Copse, Maggotts-Becketts-Chapel, Hangar Straight, Stowe, Club
+    // Authentic Silverstone Circuit (Hamilton Straight, Abbey, Farm, Village, The Loop, Aintree, Wellington Straight, Brooklands, Luffield, Woodcote, National Straight, Copse, Maggotts-Becketts-Chapel, Hangar Straight, Stowe, Vale, Club)
     controlPoints: [
-      new THREE.Vector3(110, 0, -130),  // 0. Hamilton Straight Start/Finish Line
-      new THREE.Vector3(110, 0, -30),   // 1. Hamilton Straight Acceleration
-      new THREE.Vector3(135, 0, 30),    // 2. Abbey High-Speed Right
-      new THREE.Vector3(115, 0, 75),    // 3. Farm Curve Left
-      new THREE.Vector3(65, 0, 95),     // 4. The Loop Tight Hairpin Entry
-      new THREE.Vector3(45, 0, 60),     // 5. The Loop Infield Hairpin Apex
-      new THREE.Vector3(15, 0, 15),     // 6. Aintree Corner
-      new THREE.Vector3(-45, 0, -35),   // 7. Wellington Straight Full Throttle
-      new THREE.Vector3(-105, 0, -85),  // 8. Wellington Straight Braking Point
-      new THREE.Vector3(-155, 0, -100), // 9. Brooklands Sweeper
-      new THREE.Vector3(-180, 0, -55),  // 10. Luffield Double-Apex Infield Loop
-      new THREE.Vector3(-155, 0, -10),  // 11. Woodcote Acceleration
-      new THREE.Vector3(-105, 0, 50),   // 12. National Straight to Copse
-      new THREE.Vector3(-45, 0, 105),   // 13. Copse Fast 290 km/h Blind Right
-      new THREE.Vector3(10, 0, 135),    // 14. Maggotts Fast Left Flick
-      new THREE.Vector3(50, 0, 140),    // 15. Becketts Chicane
-      new THREE.Vector3(85, 0, 115),    // 16. Chapel Curve Exit
-      new THREE.Vector3(140, 0, 45),    // 17. Hangar Straight Flat-Out
-      new THREE.Vector3(170, 0, -40),   // 18. Stowe Corner Heavy Braking Right
-      new THREE.Vector3(150, 0, -105)   // 19. Vale Chicane & Club Corner
+      new THREE.Vector3(140, 0, 0),       // 0. Start/Finish Line & Gantry (Hamilton Straight)
+      new THREE.Vector3(140, 0, 60),      // 1. Hamilton Straight Acceleration to Abbey
+      new THREE.Vector3(155, 0, 120),     // 2. Abbey (Turn 1) - High-speed right sweeper
+      new THREE.Vector3(135, 0, 180),     // 3. Farm Curve (Turn 2) - Left sweep
+      new THREE.Vector3(85, 0, 220),      // 4. Village (Turn 3) - Right hander
+      new THREE.Vector3(30, 0, 210),      // 5. The Loop (Turn 4) - Infield hairpin entry
+      new THREE.Vector3(15, 0, 165),      // 6. The Loop - Hairpin apex
+      new THREE.Vector3(35, 0, 115),      // 7. Aintree (Turn 5) - Acceleration corner
+      new THREE.Vector3(-20, 0, 50),      // 8. Wellington Straight - Full Throttle
+      new THREE.Vector3(-85, 0, -25),     // 9. Wellington Straight - DRS Zone
+      new THREE.Vector3(-150, 0, -100),   // 10. Wellington Straight - Braking Point
+      new THREE.Vector3(-200, 0, -145),   // 11. Brooklands (Turn 6) - Left sweeper
+      new THREE.Vector3(-245, 0, -105),   // 12. Luffield (Turn 7) - Carousel entry
+      new THREE.Vector3(-235, 0, -35),    // 13. Luffield - Carousel exit
+      new THREE.Vector3(-195, 0, 40),     // 14. Woodcote (Turn 8) - Fast right
+      new THREE.Vector3(-145, 0, 115),    // 15. National Straight
+      new THREE.Vector3(-85, 0, 190),     // 16. Copse (Turn 9) - 290 km/h blind right
+      new THREE.Vector3(-15, 0, 245),     // 17. Copse Exit to Maggotts
+      new THREE.Vector3(55, 0, 275),      // 18. Maggotts (Turn 10) - Fast left flick
+      new THREE.Vector3(115, 0, 270),     // 19. Becketts (Turns 11-12) - High-speed chicane
+      new THREE.Vector3(170, 0, 230),     // 20. Chapel Curve (Turn 13) - Exit onto Hangar Straight
+      new THREE.Vector3(230, 0, 150),     // 21. Hangar Straight - Full throttle acceleration
+      new THREE.Vector3(275, 0, 50),      // 22. Hangar Straight - 330 km/h DRS straight
+      new THREE.Vector3(290, 0, -65),     // 23. Hangar Straight - Stowe braking point
+      new THREE.Vector3(270, 0, -165),    // 24. Stowe (Turn 15) - Fast right
+      new THREE.Vector3(215, 0, -225),    // 25. Vale Entry
+      new THREE.Vector3(165, 0, -240),    // 26. Vale Chicane (Turns 16-17)
+      new THREE.Vector3(125, 0, -205),    // 27. Club Corner (Turn 18) - Apex
+      new THREE.Vector3(138, 0, -150),    // 28. Club Exit onto Hamilton Straight
+      new THREE.Vector3(140, 0, -80)      // 29. Hamilton Straight Grid Approach
     ]
   },
 

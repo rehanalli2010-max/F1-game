@@ -19,8 +19,8 @@ You can also simply **double-click `index.html`** — every dependency loads fro
 - **Cannon-es** fixed-step physics (`world.step(1/60, dt, 3)`) with realistic F1 downforce, drag, gear-ratio transmission (8-speed + reverse), anti-roll, anti-reverse at start line.
 - **10 Grand Prix circuits** with distinct national palettes, themed props, and FIA-spec starting gantry.
 - **10-car starting grid** with three AI difficulty tiers (Easy / Medium / Hard).
-- **Three weekend sessions**: Free Practice, One-Shot Qualifying (single flying lap), 20-Lap Sprint Race.
-- **PeerJS 6-character room code P2P multiplayer** with ghost collision (Host↔Guest) during Qualifying and 30Hz state sync for Guest thin-client rendering.
+- **Weekend sessions**: Free Practice and 20-Lap Race (10-Car Grid).
+- **PeerJS 6-character room code P2P multiplayer** with 30Hz state sync for Guest thin-client rendering.
 - **Pre-race / post-race broadcast mock ad hooks** (`SessionManager.showMockAd`).
 
 ### Phase 5 (This Update)
@@ -75,7 +75,7 @@ js/circuit.js      Procedural 3D circuit builder (track, barriers, gantry, grand
 js/track.js        Alias for circuit.js (legacy)
 js/physics.js      Cannon-es F1 physics world
 js/ai.js           10-car AI grid with 3 difficulty tiers
-js/session.js      Practice / Qualifying / Race state machine
+js/session.js      Practice / Race state machine
 js/timing.js       Lap timing, sectors, delta, session best
 js/network.js      PeerJS 6-char room code P2P
 js/tracks_db.js    10 Grand Prix configurations

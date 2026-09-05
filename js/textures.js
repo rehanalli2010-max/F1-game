@@ -210,7 +210,7 @@ export class TextureFactory {
     ctx.textBaseline = 'middle';
     ctx.fillText(carNumber, 905, 259);
 
-    // 9. Engine cover "ORACLE RED BULL RACING" sponsor block
+    // 9. Engine cover "ORION RACING" sponsor block
     ctx.fillStyle = 'rgba(11,26,58,0.92)';
     ctx.fillRect(150, 330, 320, 60);
     ctx.strokeStyle = yellow;
@@ -220,39 +220,39 @@ export class TextureFactory {
     ctx.fillStyle = yellow;
     ctx.font = '900 28px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('ORACLE', 165, 356);
+    ctx.fillText('ORION', 165, 356);
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 22px sans-serif';
-    ctx.fillText('RED BULL RACING', 165, 380);
+    ctx.fillText('ORION RACING F1', 165, 380);
 
-    // 10. Side sponsor: large "Red Bull" wordmark on engine cover
+    // 10. Side sponsor: large "ORION" wordmark on engine cover
     ctx.save();
     ctx.translate(220, 170);
     ctx.fillStyle = redBull;
     ctx.font = '900 italic 60px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('Red Bull', 0, 0);
+    ctx.fillText('ORION', 0, 0);
     ctx.restore();
 
-    // 11. Side sponsor: HONDA power unit branding
+    // 11. Side sponsor: KINETIC power unit branding
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 26px sans-serif';
-    ctx.fillText('HONDA', 540, 120);
+    ctx.fillText('KINETIC', 540, 120);
     ctx.fillStyle = redBull;
     ctx.fillRect(540, 124, 110, 6);
 
-    // 12. Bybit / SIEMENS style side sponsor (mid-sidepod)
+    // 12. PULSAR aerodynamic partner branding (mid-sidepod)
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px sans-serif';
-    ctx.fillText('BYBIT', 540, 410);
+    ctx.fillText('PULSAR', 540, 410);
     ctx.fillStyle = yellow;
     ctx.fillRect(540, 414, 86, 4);
 
-    // 13. "RB" monogram near rear
+    // 13. "07" badge near rear
     ctx.fillStyle = yellow;
     ctx.font = '900 48px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('RB', 740, 250);
+    ctx.fillText('07', 740, 250);
 
     // 14. Glossy lacquer top highlight
     const gloss = ctx.createLinearGradient(0, 0, 0, 180);
@@ -351,7 +351,7 @@ export class TextureFactory {
     ctx.font = 'bold 64px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const sponsorName = (teamId === 'redbull') ? 'ORACLE' : (teamId === 'ferrari' ? 'SHELL' : (teamId === 'mercedes' ? 'PETRONAS' : 'GRAND PRIX'));
+    const sponsorName = (teamId === 'redbull') ? 'ORION' : (teamId === 'ferrari' ? 'SHELL' : (teamId === 'mercedes' ? 'PETRONAS' : 'GRAND PRIX'));
     ctx.fillText(sponsorName, 512, 280);
 
     const tex = new THREE.CanvasTexture(canvas);
@@ -385,10 +385,10 @@ export class TextureFactory {
     ctx.fillRect(0, 0, 1024, 12);
     ctx.fillRect(0, 244, 1024, 12);
 
-    let sponsorText = 'ORACLE';
+    let sponsorText = 'ORION';
     let sponsorColor = '#ffffff';
 
-    if (teamId === 'redbull') { sponsorText = 'ORACLE'; sponsorColor = '#ffffff'; }
+    if (teamId === 'redbull') { sponsorText = 'ORION'; sponsorColor = '#ffffff'; }
     else if (teamId === 'ferrari') { sponsorText = 'FERRARI'; sponsorColor = '#ffffff'; }
     else if (teamId === 'mercedes') { sponsorText = 'NEXUS'; sponsorColor = '#00f0ff'; }
     else if (teamId === 'mclaren') { sponsorText = 'McLAREN'; sponsorColor = '#ff8000'; }

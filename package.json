@@ -14,5 +14,18 @@
     "racing-game"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rehanalli2010-max/F1-game.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rehanalli2010-max/F1-game/issues"
+  },
+  "homepage": "https://github.com/rehanalli2010-max/F1-game#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "openai": "^6.49.0"
+  }
 }

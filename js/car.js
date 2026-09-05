@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TextureFactory } from './textures.js?v=42';
+import { TextureFactory } from './textures.js?v=43';
 import { F1_TEAMS, getTeamById } from './teams_db.js?v=42';
 
 const _liveryCanvasCache = new Map();
@@ -12,12 +12,13 @@ const _tireCompoundStripes = {
 const _compoundNames = ['SOFT', 'MEDIUM', 'HARD'];
 
 /**
- * Path to the optional external Red Bull GLB body.
- * When this file exists, Red Bull cars load it in place of the procedural body
- * while keeping the existing physics chassis, wheels, steering, AI and netcode.
- * Other teams are unaffected and continue to use the procedural composite body.
+ * Path to the custom Red Bull slot GLB body ("ORION RACING").
+ * When this file exists, cars in the Red Bull team slot load it in place of
+ * the procedural body while keeping the existing physics chassis, wheels,
+ * steering, suspension, AI and netcode completely unchanged.
+ * Other teams are unaffected and continue to use their respective models.
  */
-const RED_BULL_GLB_PATH = 'assets/models/redbull.glb';
+const RED_BULL_GLB_PATH = 'assets/models/redbull.glb?v=25';
 
 /**
  * Path to the optional external Mercedes GLB body.
@@ -866,10 +867,10 @@ export class F1Car {
     const accentHex = this.accentHex;
     const carNumber = this.carNumber;
 
-    // Red Bull uses dedicated flowing navy/red/yellow livery suite
-    const isRedBull = (this.teamName && this.teamName.toLowerCase().includes('red bull')) ||
-                      (this.teamId === 'redbull') ||
-                      (primaryHex === '#03102c' || primaryHex === '#0b1a3a');
+    // Red Bull slot uses dedicated custom F1 model & livery (Orion Racing)
+    const isRedBull = (this.teamId === 'redbull') ||
+                      (this.teamName && (this.teamName.toLowerCase().includes('red bull') || this.teamName.toLowerCase().includes('orion'))) ||
+                      (primaryHex === '#03102c' || primaryHex === '#0b1a3a' || primaryHex === '#0a1d3b');
 
     // Mercedes uses dedicated premium silver/black/teal livery suite
     const isMercedes = (this.teamName && this.teamName.toLowerCase().includes('mercedes')) ||
@@ -1136,11 +1137,12 @@ export class F1Car {
       this._scheduleGlbBodySwap(FERRARI_GLB_PATH);
     }
 
-    // Only activated if an external model without duplicate wheels is supplied
-    const ENABLE_EXTERNAL_GLB = false;
-    if (this._isRedBull && ENABLE_EXTERNAL_GLB) {
+    // Custom F1 3D model for the Red Bull team slot ("ORION RACING")
+    // Applied ONLY to the Red Bull team slot; other teams continue using their respective models.
+    if (this._isRedBull) {
       this._scheduleGlbBodySwap(RED_BULL_GLB_PATH);
     }
+    const ENABLE_EXTERNAL_GLB = false;
     if (this._isMercedes && ENABLE_EXTERNAL_GLB) {
       this._scheduleGlbBodySwap(MERCEDES_GLB_PATH);
     }

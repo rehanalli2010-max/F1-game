@@ -1,6 +1,6 @@
 /**
  * Formula 1 Session State Controller
- * Manages Practice Mode, One-Shot Flying Lap Qualifying, and 10-Car Grid Sprint Race
+ * Manages Practice Mode and 10-Car Grid Race
  * with authentic 5-Red-Lights starting sequence, AI difficulty engine, and broadcast sponsor mock ads.
  */
 
@@ -9,7 +9,6 @@ import * as CANNON from 'cannon-es';
 
 export const SESSION_TYPES = {
   PRACTICE: 'PRACTICE',
-  QUALIFYING: 'QUALIFYING',
   RACE: 'RACE'
 };
 
@@ -41,10 +40,6 @@ export class SessionManager {
 
     // AI Grid Manager (10 Cars)
     this.aiGrid = null;
-
-    // Qualifying state
-    this.qualifyingPhase = 'OUT_LAP'; // 'OUT_LAP' -> 'FLYING_LAP' -> 'FINISHED'
-    this.qualifyingResult = null;
 
     if (this.timing) {
       this.timing.onLapCompleteCallback = (lapResult) => this.handleLapComplete(lapResult);
@@ -120,8 +115,6 @@ export class SessionManager {
 
     if (mode === SESSION_TYPES.PRACTICE) {
       this.startPracticeSession(playerVehicle, playerCar);
-    } else if (mode === SESSION_TYPES.QUALIFYING) {
-      this.startQualifyingSession(playerVehicle, playerCar);
     } else if (mode === SESSION_TYPES.RACE) {
       this.startRaceSession(playerVehicle, playerCar, qualifiedGrid);
     }
@@ -155,40 +148,7 @@ export class SessionManager {
   }
 
   /* --------------------------------------------------------------------------
-     2. ONE-SHOT QUALIFYING MODE (Solo Flying Lap Run)
-     -------------------------------------------------------------------------- */
-  startQualifyingSession(playerVehicle, playerCar) {
-    this.raceState = 'QUALIFYING';
-    this.qualifyingPhase = 'OUT_LAP';
-    this.qualifyingResult = null;
-
-    // Rolling start spawn: ~120m before the start/finish line (t ~ 0.95)
-    const spawnT = 0.95;
-    const spawnPt = this.track.curve.getPointAt(spawnT);
-    const tgt = this.track.curve.getTangentAt(spawnT).normalize();
-    const yaw = Math.atan2(tgt.x, tgt.z);
-    const spawnY = (spawnPt.y || 0) + 0.04;
-
-    // Initial rolling speed of ~220 km/h (61 m/s)
-    this.physics.resetVehicle(playerVehicle, spawnPt.x, spawnY, spawnPt.z, yaw, 61.0);
-    playerVehicle.currentGear = 6;
-    playerVehicle.rpm = 11500;
-
-    // Hide and deactivate all 9 AI cars in Qualifying mode
-    if (this.aiGrid) {
-      this.aiGrid.setupSession('QUALIFYING');
-    }
-
-    if (this.ui.showAlert) {
-      this.ui.showAlert('OUT-LAP APPROACH - PREPARE FOR HOT LAP', 3000, 'alert-flying-lap');
-    }
-    if (this.ui.updateSessionBadge) {
-      this.ui.updateSessionBadge('QUALIFYING', 'OUT-LAP APPROACH');
-    }
-  }
-
-  /* --------------------------------------------------------------------------
-     3. SPRINT RACE MODE (10 Cars on 2x2 Staggered Grid)
+     2. RACE MODE (10 Cars on 2x2 Staggered Grid)
      -------------------------------------------------------------------------- */
   startRaceSession(playerVehicle, playerCar, qualifiedGrid = null) {
     this.raceState = 'PRE_START';
@@ -306,27 +266,7 @@ export class SessionManager {
    * Main session tick called in game loop
    */
   update(dt, playerVehicle, playerPos, playerVel) {
-    // 1. QUALIFYING LOGIC
-    if (this.currentMode === SESSION_TYPES.QUALIFYING) {
-      const trackInfo = this.track.getClosestTrackPoint(playerPos.x, playerPos.z);
-      const progress = trackInfo.t;
-
-      if (this.qualifyingPhase === 'OUT_LAP') {
-        // Arm timing when player crosses the start line from approaching straight
-        if (progress > 0.99 || progress < 0.04) {
-          this.qualifyingPhase = 'FLYING_LAP';
-          this.timing.start();
-          if (this.ui.showAlert) {
-            this.ui.showAlert('FLYING LAP ACTIVE - MAXIMUM ATTACK!', 2500, 'alert-flying-lap');
-          }
-          if (this.ui.updateSessionBadge) {
-            this.ui.updateSessionBadge('QUALIFYING', 'HOT LAP 1/1');
-          }
-        }
-      }
-    }
-
-    // 2. RACE AI GRID DYNAMICS
+    // RACE AI GRID DYNAMICS
     if (this.currentMode === SESSION_TYPES.RACE) {
       if (this.raceState === 'RACING' || this.raceState === 'FINISHING') {
 if (this.aiGrid) {
@@ -394,28 +334,6 @@ if (this.aiGrid) {
         this.ui.updateSessionBadge('PRACTICE', `LAP ${this.timing.currentLap}`);
       }
     }
-
-    // QUALIFYING: 1 hot lap finishes the session
-    if (this.currentMode === SESSION_TYPES.QUALIFYING) {
-      if (this.qualifyingPhase === 'FLYING_LAP') {
-        this.qualifyingPhase = 'FINISHED';
-        this.timing.timerRunning = false;
-
-        // Simulate AI times for the 9 opponents based on selected difficulty & sort 10 drivers
-        let evalResult = null;
-        if (this.aiGrid) {
-          evalResult = this.aiGrid.simulateQualifyingTimes(lapResult.time);
-        } else {
-          evalResult = this.timing.getQualifyingClassification(lapResult.time);
-        }
-        this.qualifyingResult = evalResult;
-
-        if (this.ui.showQualifyingModal) {
-          this.ui.showQualifyingModal(evalResult);
-        }
-      }
-    }
-
     // RACE MODE: Check laps
     if (this.currentMode === SESSION_TYPES.RACE) {
       this.playerRaceLap++;
@@ -436,7 +354,7 @@ if (this.aiGrid) {
   }
 
   /**
-   * Concludes the Grand Prix Sprint Race and displays full 10-car classification
+   * Concludes the Grand Prix Race and displays full 10-car classification
    */
   finishRace() {
     if (this.raceState === 'FINISHED') return;
@@ -518,10 +436,6 @@ if (this.aiGrid) {
       clearTimeout(this.gantryTimer);
       this.gantryTimer = null;
     }
-
-    // Qualifying state
-    this.qualifyingPhase = 'OUT_LAP';
-    this.qualifyingResult = null;
   }
 
   clearAllTimers() {

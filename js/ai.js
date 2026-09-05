@@ -22,12 +22,12 @@ export const DRIVER_ROSTER = [
     id: 'ai_1',
     name: 'M. Verstappen',
     code: 'VER',
-    team: 'Red Bull Racing',
-    number: '1',
-    color: 0x03102c,
-    secondaryHex: '#fcd700',
-    accentHex: '#dc0000',
-    accentColor: 0xffd700,
+    team: 'Orion Racing',
+    number: '07',
+    color: 0x0a1d3b,
+    secondaryHex: '#0e1117',
+    accentHex: '#e30613',
+    accentColor: 0xffcc00,
     isPlayer: false,
     baseSkill: 0.99,
     teamId: 'redbull'
@@ -704,7 +704,7 @@ export class AIGridManager {
 
     // 2. Default canonical AI roster representing the other 9 constructors
     const defaultRoster = [
-      { id: 'ai_1', name: 'M. Verstappen', code: 'VER', team: 'Red Bull Racing', number: '1', color: 0x03102c, secondaryHex: '#fcd700', accentHex: '#dc0000', accentColor: 0xffd700, teamId: 'redbull' },
+      { id: 'ai_1', name: 'M. Verstappen', code: 'VER', team: 'Orion Racing', number: '07', color: 0x0a1d3b, secondaryHex: '#0e1117', accentHex: '#e30613', accentColor: 0xffcc00, teamId: 'redbull' },
       { id: 'ai_2', name: 'L. Hamilton', code: 'HAM', team: 'Mercedes-AMG', number: '44', color: 0x00d2be, secondaryHex: '#c0c0c0', accentHex: '#0a0a0a', accentColor: 0x00f0ff, teamId: 'mercedes' },
       { id: 'ai_3', name: 'L. Norris', code: 'NOR', team: 'McLaren', number: '4', color: 0xff8000, secondaryHex: '#00d2be', accentHex: '#141416', accentColor: 0x00d2be, teamId: 'mclaren' },
       { id: 'ai_4', name: 'F. Alonso', code: 'ALO', team: 'Aston Martin', number: '14', color: 0x00594f, secondaryHex: '#cedc00', accentHex: '#0c221f', accentColor: 0xcedc00, teamId: 'astonmartin' },
@@ -830,6 +830,11 @@ export class AIGridManager {
         insideApexSign = curvature > 0 ? -1 : 1;
         offset = insideApexSign * 1.5;
         targetSpeed = Math.max(42.0, 86.0 - Math.abs(curvature) * 180.0);
+      }
+
+      // On the starting grid straight (t > 0.94 or t < 0.05), ensure targetSpeed is full straight pace
+      if (t > 0.94 || t < 0.05) {
+        targetSpeed = Math.max(targetSpeed, 78.0);
       }
 
       const wpPos = new THREE.Vector3().copy(pt).addScaledVector(norm, offset);
@@ -968,6 +973,9 @@ export class AIGridManager {
     this.physics.resetVehicle(this.playerVehicle, spawnX, spawnY, spawnZ, yaw, 0);
     this.playerVehicle.currentGear = 1;
     this.playerVehicle.rpm = 4000;
+
+    this.playerSpawnGridPos = new THREE.Vector3(spawnX, spawnY, spawnZ);
+    this.playerSpawnGridYaw = yaw;
 
     const trackLen = this.track.trackLength || 1850;
     const distFromStart = (1.0 - slotT) * trackLen;

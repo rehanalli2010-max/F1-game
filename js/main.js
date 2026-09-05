@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=41';
-import { F1Car } from './car.js?v=32';
+import { F1Car } from './car.js?v=33';
 import { PhysicsWorld } from './physics.js?v=62';
 import { Track } from './circuit.js?v=321';
 import { TimingSystem } from './timing.js?v=351';
@@ -228,6 +228,7 @@ class F1Game {
     this.aiGrid = new AIGridManager(this.track, this.physics, this.scene);
     this.aiGrid.init(this.playerVehicle, this.playerCar);
     this.aiGrid.setPlayerTeam(initialTeam);
+    this.resetCamera();
   }
 
   initTimingAndSession() {
@@ -240,7 +241,6 @@ class F1Game {
       onSessionChange: (mode) => this.onSessionChanged(mode),
       setStartLightsVisible: (vis) => this.setStartLightsVisible(vis),
       updateGantryBulbs: (count) => this.updateGantryBulbs(count),
-      showQualifyingModal: (result) => this.showQualifyingModal(result),
       showRaceFinishModal: (result) => this.showRaceFinishModal(result),
       showMockAd: (adConfig) => this.showMockAd(adConfig),
       broadcastLights: (data) => {
@@ -371,6 +371,34 @@ class F1Game {
     ctx.stroke();
   }
 
+  resetInputs() {
+    this.keys = {};
+    this.touchThrottle = 0;
+    this.touchBrake = 0;
+    this.touchSteer = 0;
+    this.controls.throttle = 0;
+    this.controls.brake = 0;
+    this.controls.steer = 0;
+    if (this.playerVehicle) {
+      this.playerVehicle.isReversing = false;
+      this.playerVehicle.reverseBlocked = false;
+      if (this.playerVehicle.body) {
+        this.playerVehicle.body.angularVelocity.set(0, 0, 0);
+      }
+    }
+    delete this._silverstoneAutoPilot;
+    delete this._silverstoneAutopilot;
+    // Clear active UI classes on touch/virtual controls
+    ['touch-throttle', 'touch-brake', 'touch-left', 'touch-right', 'virtual-throttle', 'virtual-brake'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('active');
+        if (id === 'virtual-throttle') el.style.background = 'rgba(0,210,190,0.3)';
+        if (id === 'virtual-brake') el.style.background = 'rgba(255,59,48,0.3)';
+      }
+    });
+  }
+
   initInputs() {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
@@ -385,11 +413,25 @@ class F1Game {
       if (e.code === 'KeyR') this.restartSession();
       if (e.code === 'KeyM') this.toggleMute();
       if (e.code === 'KeyH') this.toggleHelpModal();
+      if (e.code === 'KeyC') this.resetCamera();
     });
 
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
       if (e.key) this.keys[e.key.toLowerCase()] = false;
+    });
+
+    // Zero out inputs whenever window loses focus, tabs change, or pointer cancels
+    window.addEventListener('blur', () => this.resetInputs());
+    window.addEventListener('focus', () => this.resetInputs());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.resetInputs();
+    });
+    window.addEventListener('pointercancel', () => this.resetInputs());
+    window.addEventListener('mouseup', () => {
+      this.touchThrottle = 0;
+      this.touchBrake = 0;
+      this.touchSteer = 0;
     });
 
     // Touch and mouse unlock for audio
@@ -681,6 +723,31 @@ class F1Game {
       btn.addEventListener('touchcancel', end, { passive: false });
     };
 
+    window.addEventListener('touchend', (e) => {
+      if (!e.touches || e.touches.length === 0) {
+        this.touchThrottle = 0;
+        this.touchBrake = 0;
+        activeBrakeTouch = null;
+        activeThrottleTouch = null;
+        if (brakeBtn) {
+          brakeBtn.classList.remove('active');
+          brakeBtn.style.background = 'rgba(255,59,48,0.3)';
+        }
+        if (throttleBtn) {
+          throttleBtn.classList.remove('active');
+          throttleBtn.style.background = 'rgba(0,210,190,0.3)';
+        }
+      }
+    });
+    window.addEventListener('touchcancel', (e) => {
+      if (!e.touches || e.touches.length === 0) {
+        this.touchThrottle = 0;
+        this.touchBrake = 0;
+        activeBrakeTouch = null;
+        activeThrottleTouch = null;
+      }
+    });
+
     bindPedal(brakeBtn, 'brake');
     bindPedal(throttleBtn, 'throttle');
   }
@@ -694,10 +761,14 @@ class F1Game {
 
     // If controls locked during lights countdown in Race mode
     if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
-      const isAcc = (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || (this.gamepad && this.gamepad.buttons[7].pressed)); // RT/R2
-      this.controls.throttle = isAcc ? 0.3 : 0; // jump start probe
+      const isAcc = !!(this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || (this.gamepad && this.gamepad.buttons[7]?.pressed)); // RT/R2
+      this.controls.throttle = 0; // Strictly zero throttle - car cannot move before red lights go off!
       this.controls.brake = 1.0;
       this.controls.steer = 0;
+      // Allow visual/audio RPM revving on the grid without moving the car
+      if (isAcc && this.playerVehicle) {
+        this.playerVehicle.rpm = Math.min(12500, Math.max(this.playerVehicle.rpm || 4000, 10800));
+      }
       return;
     }
 
@@ -713,7 +784,7 @@ class F1Game {
       const dpadLeft = this.gamepad.buttons[14]?.pressed || false;
       const dpadRight = this.gamepad.buttons[15]?.pressed || false;
       
-      if (Math.abs(leftStickX) > 0.1) {
+      if (Math.abs(leftStickX) > 0.15) {
         gamepadSteer = -leftStickX; // Invert: left stick left = positive steer (turn left)
       } else if (dpadLeft) {
         gamepadSteer = 1;
@@ -723,13 +794,13 @@ class F1Game {
 
       // Right Trigger (RT/R2) - index 7 for standard gamepad, 5 for some
       const rtValue = this.gamepad.buttons[7]?.value || this.gamepad.buttons[5]?.value || 0;
-      if (rtValue > 0.05) {
+      if (rtValue > 0.15) {
         gamepadThrottle = rtValue;
       }
 
       // Left Trigger (LT/L2) - index 6 for standard gamepad, 4 for some
       const ltValue = this.gamepad.buttons[6]?.value || this.gamepad.buttons[4]?.value || 0;
-      if (ltValue > 0.05) {
+      if (ltValue > 0.15) {
         gamepadBrake = ltValue;
       }
 
@@ -743,7 +814,7 @@ class F1Game {
     }
 
     // Throttle (W, Up Arrow, or Mobile Touch Gas, or Gamepad RT)
-    const isAccelerating = this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || gamepadThrottle > 0;
+    const isAccelerating = !!(this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['w'] || this.touchThrottle > 0 || gamepadThrottle > 0);
     const targetThrottle = isAccelerating ? Math.max(this.touchThrottle, gamepadThrottle, 1.0) : 0;
     if (isAccelerating) {
       this.controls.throttle = Math.min(1.0, this.controls.throttle + dt * 5.5);
@@ -752,7 +823,7 @@ class F1Game {
     }
 
     // Brake / Reverse (S, Down Arrow, or Mobile Touch Brake, or Gamepad LT)
-    const isBraking = this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.touchBrake > 0 || gamepadBrake > 0;
+    const isBraking = !!(this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.touchBrake > 0 || gamepadBrake > 0);
     if (isBraking) {
       // Anti-reverse protection near Start/Finish line & starting lights
       if (this.track && this.playerVehicle) {
@@ -792,6 +863,26 @@ class F1Game {
   cycleCamera() {
     // Camera is permanently locked to Third-Person Chase View
     this.cameraMode = 'CHASE';
+    this.resetCamera();
+  }
+
+  resetCamera() {
+    this.cameraMode = 'CHASE';
+    this._smoothCameraForward = null;
+    const isGuest = (this.isMultiplayer && !this.isHost && this.aiGrid && this.aiGrid.aiCars[0]);
+    const focusCar = isGuest ? this.aiGrid.aiCars[0].visualCar : this.playerCar;
+    if (focusCar && focusCar.group) {
+      const effPos = focusCar.group.position;
+      const effForward = new THREE.Vector3(0, 0, 1).applyQuaternion(focusCar.group.quaternion);
+      this._smoothCameraForward = effForward.clone();
+      this.camera.fov = 62;
+      this.camera.updateProjectionMatrix();
+      this.camera.position.copy(effPos).addScaledVector(effForward, -6.0);
+      this.camera.position.y = effPos.y + 2.15;
+      this.cameraLookTarget.copy(effPos).addScaledVector(effForward, 4.2);
+      this.cameraLookTarget.y = effPos.y + 0.85;
+      this.camera.lookAt(this.cameraLookTarget);
+    }
   }
 
   updateCamera(dt, carPos, carForward, speedMps) {
@@ -801,77 +892,42 @@ class F1Game {
     const effForward = focusCar ? new THREE.Vector3(0, 0, 1).applyQuaternion(focusCar.group.quaternion) : carForward;
     const effSpeedMps = speedMps;
 
-    if (this.cameraMode === 'CHASE') {
-      // Third-person smooth follow
-      const speedKmh = effSpeedMps * 3.6;
-      // Dynamic FOV based on speed (sensational warp feeling)
-      const targetFov = 62 + Math.min(16, (speedKmh / 320) * 16);
-      this.camera.fov += (targetFov - this.camera.fov) * dt * 4;
-      this.camera.updateProjectionMatrix();
+    // Enforce Third-Person Chase View
+    this.cameraMode = 'CHASE';
 
-      // Chase position: ~6.2m behind, ~2.3m up
-      const behindDist = 6.2;
-      const heightDist = 2.2 + (speedKmh / 350) * 0.4;
+    // Third-person smooth follow
+    const speedKmh = Math.abs(effSpeedMps) * 3.6;
+    // Dynamic FOV based on speed (sensational warp feeling: 62 deg at rest to 74 deg at 320 km/h)
+    const targetFov = 62 + Math.min(12, (speedKmh / 320) * 12);
+    this.camera.fov += (targetFov - this.camera.fov) * Math.min(1.0, dt * 5.0);
+    this.camera.updateProjectionMatrix();
 
-      // Smooth camera heading (yaw) so camera swings around corners smoothly
-      // while maintaining a rock-solid, locked distance along the car's forward axis
-      // (eliminates forward-backward distance rubber-banding & acceleration vibration)
-      if (!this._smoothCameraForward) {
-        this._smoothCameraForward = new THREE.Vector3().copy(effForward);
-      }
-      const headingFollowSpeed = Math.min(1.0, dt * 9.0);
-      this._smoothCameraForward.lerp(effForward, headingFollowSpeed).normalize();
+    // Optimal chase position: ~6.0m behind, ~2.15m up (plus subtle speed elevation for corner visibility)
+    const behindDist = 6.0;
+    const heightDist = 2.15 + Math.min(0.35, (speedKmh / 350) * 0.35);
 
-      // Lock camera position relative to car along smoothed heading
-      this.camera.position.copy(effPos)
-        .addScaledVector(this._smoothCameraForward, -behindDist);
-      this.camera.position.y = effPos.y + heightDist;
-
-      // Smooth lookahead point along the car's smoothed direction
-      this.cameraLookTarget.copy(effPos)
-        .addScaledVector(this._smoothCameraForward, 4.0);
-      this.cameraLookTarget.y = effPos.y + 0.9;
-
-      this.camera.lookAt(this.cameraLookTarget);
-
-    } else if (this.cameraMode === 'COCKPIT') {
-      // Driver Helmet / Halo Perspective
-      this.camera.fov = 72;
-      this.camera.updateProjectionMatrix();
-
-      this._scratchCockpitPos.set(0, 0.58, 0.45);
-      if (focusCar && focusCar.visualBody) {
-        focusCar.visualBody.localToWorld(this._scratchCockpitPos);
-      } else {
-        this._scratchCockpitPos.copy(effPos).add(this._scratchCockpitPos);
-      }
-      this.camera.position.copy(this._scratchCockpitPos);
-
-      this._scratchCockpitLook.set(0, 0.56, 10.0);
-      if (focusCar && focusCar.visualBody) {
-        focusCar.visualBody.localToWorld(this._scratchCockpitLook);
-      } else {
-        this._scratchCockpitLook.copy(effPos).add(this._scratchCockpitLook);
-      }
-      this.camera.lookAt(this._scratchCockpitLook);
-
-    } else if (this.cameraMode === 'TV') {
-      // Cinematic trackside broadcast camera
-      this.camera.fov = 48;
-      this.camera.updateProjectionMatrix();
-
-      // Find nearby vantage point on track
-      const trackInfo = this.track.getClosestTrackPoint(effPos.x, effPos.z);
-      this._scratchTvTan.set(-trackInfo.tangent.z, 0, trackInfo.tangent.x);
-      this._scratchTvPos.copy(trackInfo.point)
-        .addScaledVector(this._scratchUp, 12.0)
-        .addScaledVector(this._scratchTvTan, 22.0);
-
-      this.camera.position.lerp(this._scratchTvPos, Math.min(1, dt * 1.5));
-      this.camera.lookAt(effPos.x, effPos.y + 0.5, effPos.z);
+    // Smooth camera heading (yaw) so camera swings around corners smoothly
+    // while maintaining a rock-solid, locked distance along the car's forward axis
+    // (eliminates forward-backward distance rubber-banding & acceleration vibration)
+    if (!this._smoothCameraForward || !Number.isFinite(this._smoothCameraForward.x)) {
+      this._smoothCameraForward = new THREE.Vector3().copy(effForward);
     }
+    const headingFollowSpeed = Math.min(1.0, dt * 10.0);
+    this._smoothCameraForward.lerp(effForward, headingFollowSpeed).normalize();
 
-    // Inject camera shake offset (after the chosen mode has set position/look)
+    // Lock camera position relative to car along smoothed heading
+    this.camera.position.copy(effPos)
+      .addScaledVector(this._smoothCameraForward, -behindDist);
+    this.camera.position.y = effPos.y + heightDist;
+
+    // Smooth lookahead point along the car's smoothed direction
+    this.cameraLookTarget.copy(effPos)
+      .addScaledVector(this._smoothCameraForward, 4.2);
+    this.cameraLookTarget.y = effPos.y + 0.85;
+
+    this.camera.lookAt(this.cameraLookTarget);
+
+    // Inject camera shake offset (subtle vibration from kerbs & impacts)
     if (this.fx) {
       const shakeOffset = this.fx.getShakeOffset();
       if (this.fx.shakeTime > 0) {
@@ -883,7 +939,10 @@ class F1Game {
   }
 
   restartSession() {
+    this.resetInputs();
     this.session.initSession(this.session.currentMode, this.playerVehicle, this.playerCar);
+    this.resetInputs();
+    this.resetCamera();
   }
 
   toggleMute() {
@@ -902,15 +961,12 @@ class F1Game {
   initUI() {
     // Session buttons
     const practiceBtn = document.getElementById('btn-mode-practice');
-    const qualiBtn = document.getElementById('btn-mode-qualifying');
     const raceBtn = document.getElementById('btn-mode-race');
 
     if (practiceBtn) practiceBtn.addEventListener('click', () => this.session.initSession(SESSION_TYPES.PRACTICE, this.playerVehicle, this.playerCar));
-    if (qualiBtn) qualiBtn.addEventListener('click', () => this.session.initSession(SESSION_TYPES.QUALIFYING, this.playerVehicle, this.playerCar));
     if (raceBtn) {
       raceBtn.addEventListener('click', () => {
-        const qualifiedGrid = this.session.qualifyingResult ? this.session.qualifyingResult.gridOrder : null;
-        this.session.initSession(SESSION_TYPES.RACE, this.playerVehicle, this.playerCar, qualifiedGrid);
+        this.session.initSession(SESSION_TYPES.RACE, this.playerVehicle, this.playerCar);
       });
     }
 
@@ -948,24 +1004,10 @@ class F1Game {
 
     this.initLanguageSelectorUI();
 
-    const qRetry = document.getElementById('btn-quali-retry');
-    if (qRetry) qRetry.addEventListener('click', () => {
-      this.closeModals();
-      this.session.initSession(SESSION_TYPES.QUALIFYING, this.playerVehicle, this.playerCar);
-    });
-
-    const qRace = document.getElementById('btn-quali-race');
-    if (qRace) qRace.addEventListener('click', () => {
-      this.closeModals();
-      const qualifiedGrid = this.session.qualifyingResult ? this.session.qualifyingResult.gridOrder : null;
-      this.session.initSession(SESSION_TYPES.RACE, this.playerVehicle, this.playerCar, qualifiedGrid);
-    });
-
     const raceAgain = document.getElementById('btn-race-again');
     if (raceAgain) raceAgain.addEventListener('click', () => {
       this.closeModals();
-      const qualifiedGrid = this.session.qualifyingResult ? this.session.qualifyingResult.gridOrder : null;
-      this.session.initSession(SESSION_TYPES.RACE, this.playerVehicle, this.playerCar, qualifiedGrid);
+      this.session.initSession(SESSION_TYPES.RACE, this.playerVehicle, this.playerCar);
     });
 
     const raceToPractice = document.getElementById('btn-race-practice');
@@ -1186,9 +1228,6 @@ class F1Game {
         const livePos = this.aiGrid ? this.aiGrid.getPlayerLivePosition() : 1;
         playerPosEl.style.display = 'inline-block';
         playerPosEl.textContent = `P${livePos} / 10`;
-      } else if (this.session.currentMode === SESSION_TYPES.QUALIFYING) {
-        playerPosEl.style.display = 'inline-block';
-        playerPosEl.textContent = this.session.qualifyingPhase === 'FLYING_LAP' ? 'HOT LAP' : 'OUT LAP';
       } else {
         playerPosEl.style.display = 'none';
       }
@@ -1198,14 +1237,6 @@ class F1Game {
     if (lapCounterEl) {
       if (this.session.currentMode === SESSION_TYPES.PRACTICE) {
         lapCounterEl.textContent = `LAP ${this.timing.currentLap}`;
-      } else if (this.session.currentMode === SESSION_TYPES.QUALIFYING) {
-        if (this.session.qualifyingPhase === 'OUT_LAP') {
-          lapCounterEl.textContent = 'OUT LAP';
-        } else if (this.session.qualifyingPhase === 'FLYING_LAP') {
-          lapCounterEl.textContent = 'HOT LAP';
-        } else {
-          lapCounterEl.textContent = 'LAP 1/1';
-        }
       } else if (this.session.currentMode === SESSION_TYPES.RACE) {
         if (this.session.raceState === 'FINISHED') {
           lapCounterEl.textContent = `LAP ${this.session.raceLapsTotal}/${this.session.raceLapsTotal}`;
@@ -1377,10 +1408,6 @@ class F1Game {
     if (this.i18n) {
       if (mode === 'PRACTICE' && (status === 'FREE DRIVING' || status === 'SOLO TRACK RUN')) {
         display = this.i18n.t('badge_practice_free');
-      } else if (mode === 'QUALIFYING' && (status === 'OUT-LAP APPROACH' || status === 'OUT-LAP')) {
-        display = this.i18n.t('badge_quali_outlap');
-      } else if (mode === 'QUALIFYING' && status.includes('HOT LAP')) {
-        display = this.i18n.t('badge_quali_hotlap');
       } else if (mode === 'RACE' && status.includes('GRID')) {
         display = this.i18n.t('badge_race_grid');
       } else if (status.startsWith('LAP ')) {
@@ -1417,9 +1444,6 @@ class F1Game {
     if (mode === SESSION_TYPES.PRACTICE) {
       const btn = document.getElementById('btn-mode-practice');
       if (btn) btn.classList.add('active');
-    } else if (mode === SESSION_TYPES.QUALIFYING) {
-      const btn = document.getElementById('btn-mode-qualifying');
-      if (btn) btn.classList.add('active');
     } else if (mode === SESSION_TYPES.RACE) {
       const btn = document.getElementById('btn-mode-race');
       if (btn) btn.classList.add('active');
@@ -1449,47 +1473,6 @@ class F1Game {
         else botBulb.classList.remove('active');
       }
     }
-  }
-
-  showQualifyingModal(result) {
-    const modal = document.getElementById('modal-qualifying');
-    if (!modal) return;
-
-    const posEl = document.getElementById('quali-pos-text');
-    if (posEl) {
-      posEl.textContent = `P${result.position}`;
-      posEl.style.color = result.position === 1 ? '#ffd000' : '#ffffff';
-    }
-
-    const timeEl = document.getElementById('quali-time-text');
-    if (timeEl) timeEl.textContent = TimingSystem.formatTime(result.playerTime);
-
-    const deltaEl = document.getElementById('quali-delta-text');
-    if (deltaEl) {
-      deltaEl.textContent = result.position === 1 ? 'POLE POSITION!' : TimingSystem.formatDelta(result.deltaToPole);
-      deltaEl.style.color = result.position === 1 ? '#b026ff' : '#00d2be';
-    }
-
-    // Populate all 10 drivers classification table
-    const tbody = document.getElementById('quali-table-body');
-    if (tbody) {
-      tbody.innerHTML = '';
-      result.classification.forEach(row => {
-        const tr = document.createElement('tr');
-        if (row.isPlayer) tr.className = 'highlight-player';
-        const gapDisplay = row.pos === 1 ? 'POLE' : TimingSystem.formatDelta(row.gapToPole !== undefined ? row.gapToPole : (row.delta || 0));
-        tr.innerHTML = `
-          <td><strong>P${row.pos}</strong></td>
-          <td>${row.name}</td>
-          <td>${row.team}</td>
-          <td>${TimingSystem.formatTime(row.time)}</td>
-          <td>${gapDisplay}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    modal.classList.add('active');
   }
 
   showRaceFinishModal(result) {
@@ -1602,6 +1585,7 @@ class F1Game {
   }
 
   openTrackSelectModal() {
+    this.resetInputs();
     const modal = document.getElementById('modal-track-select');
     if (modal) {
       modal.classList.add('active');
@@ -1743,6 +1727,7 @@ class F1Game {
     if (!trackData) return;
 
     this.currentTrackId = trackId;
+    this.resetInputs();
 
     // 1. Procedural Track Load (cleans up previous meshes & static Cannon-es physics colliders)
     this.track.loadTrack(trackData);
@@ -1787,6 +1772,12 @@ class F1Game {
 
     // 7. Reset session cleanly to Practice mode on the new starting grid
     this.session.initSession(SESSION_TYPES.PRACTICE, this.playerVehicle, this.playerCar);
+    this.resetInputs();
+    if (this.playerVehicle && this.playerVehicle.body) {
+      this.playerVehicle.body.velocity.set(0, 0, 0);
+      this.playerVehicle.body.angularVelocity.set(0, 0, 0);
+    }
+    this.resetCamera();
     this.showCenterAlert(`CIRCUIT LOADED: ${trackData.name.toUpperCase()}`, 2500, 'alert-flying-lap');
   }
 
@@ -1794,6 +1785,7 @@ class F1Game {
      F1 CAR & CONSTRUCTOR TEAM SELECTION SYSTEM
      -------------------------------------------------------------------------- */
   openCarSelectModal() {
+    this.resetInputs();
     const modal = document.getElementById('modal-car-select');
     if (modal) {
       modal.classList.add('active');
@@ -2055,10 +2047,6 @@ class F1Game {
       this.session.setGuestLights(packet.step, packet.lightsOut);
     };
 
-    this.network.onQualiResults = (packet) => {
-      this.showQualifyingModal(packet.result);
-    };
-
     this.network.onRaceFinish = (packet) => {
       this.showRaceFinishModal(packet.result);
     };
@@ -2147,8 +2135,6 @@ class F1Game {
 
     if (packet.mode === SESSION_TYPES.PRACTICE) {
       this.session.startPracticeSession(this.playerVehicle, this.playerCar);
-    } else if (packet.mode === SESSION_TYPES.QUALIFYING) {
-      this.session.startQualifyingSession(this.playerVehicle, this.playerCar);
     } else if (packet.mode === SESSION_TYPES.RACE) {
       this.session.startRaceSession(this.playerVehicle, this.playerCar);
     }
@@ -2213,6 +2199,7 @@ class F1Game {
   }
 
   toggleHelpModal(force) {
+    this.resetInputs();
     const modal = document.getElementById('modal-help');
     if (!modal) return;
     if (force !== undefined) {
@@ -2224,6 +2211,7 @@ class F1Game {
   }
 
   toggleLanguageModal(force) {
+    this.resetInputs();
     const modal = document.getElementById('modal-language');
     if (!modal) return;
     this.updateLanguageSelectorUI();
@@ -2236,6 +2224,7 @@ class F1Game {
   }
 
   openLanguageModal() {
+    this.resetInputs();
     this.toggleLanguageModal(true);
   }
 
@@ -2300,6 +2289,7 @@ class F1Game {
   }
 
   closeModals() {
+    this.resetInputs();
     document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
   }
 
@@ -2402,8 +2392,25 @@ class F1Game {
     // ======================================================================
     // SINGLE PLAYER & HOST AUTHORITATIVE SIMULATION
     // ======================================================================
+    // During countdown, keep player car firmly locked on starting grid position
+    if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
+      this.playerVehicle.body.velocity.set(0, 0, 0);
+      this.playerVehicle.body.angularVelocity.set(0, 0, 0);
+      if (this.aiGrid && this.aiGrid.playerSpawnGridPos) {
+        this.playerVehicle.body.position.copy(this.aiGrid.playerSpawnGridPos);
+      }
+    }
+
     this.physics.updateVehicle(this.playerVehicle, this.controls, dt, this.audio);
     this.physics.step(dt);
+
+    if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
+      this.playerVehicle.body.velocity.set(0, 0, 0);
+      this.playerVehicle.body.angularVelocity.set(0, 0, 0);
+      if (this.aiGrid && this.aiGrid.playerSpawnGridPos) {
+        this.playerVehicle.body.position.copy(this.aiGrid.playerSpawnGridPos);
+      }
+    }
 
     // Use Cannon-es physics interpolated position & quaternion to ensure silky-smooth rendering
     const pPos = (this.playerVehicle.body.interpolatedPosition && Number.isFinite(this.playerVehicle.body.interpolatedPosition.x))
@@ -2466,6 +2473,22 @@ class F1Game {
       this.controls.throttle,
       this.controls.brake,
       isBottomingOut
+    );
+
+    // Update Session state machine & 10-car AI grid dynamics
+    this.session.update(dt, this.playerVehicle, pPos, vel);
+    this.timing.update(pPos, vel);
+    this.lastCheckedLap = this.timing.currentLap;
+
+    if (this.track && this.track.update) {
+      this.track.update(dt);
+    }
+
+    this.audio.update(
+      this.playerVehicle.rpm,
+      this.controls.throttle,
+      speedKmh,
+      this.playerVehicle.lateralSlip
     );
 
     this.updateCamera(dt, this.playerCar.group.position, forward, speedMps);
