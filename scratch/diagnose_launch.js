@@ -71,7 +71,8 @@ async function main() {
         errors.push(line);
       }
     } else if (msg.method === 'Runtime.exceptionThrown') {
-      const err = `[EXCEPTION]: ${msg.params.exceptionDetails.text} - ${msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.exception?.value || ''}`;
+      const details = msg.params.exceptionDetails;
+      const err = `[EXCEPTION]: ${details.text} at ${details.url}:${details.lineNumber}:${details.columnNumber} - ${details.exception?.description || details.exception?.value || ''}`;
       console.error(err);
       errors.push(err);
     } else if (msg.method === 'Log.entryAdded') {

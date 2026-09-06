@@ -57,6 +57,10 @@ export class NetworkManager {
    */
   static formatPeerId(code) {
     const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    // Validate format: F1-XXXX
+    if (!/^F1-[A-Z0-9]{4}$/.test(clean)) {
+      throw new Error('Invalid room code format');
+    }
     return `f1gp-2026-${clean.toLowerCase()}`;
   }
 
@@ -66,7 +70,18 @@ export class NetworkManager {
   hostRoom(roomCode = null, retryCount = 0) {
     this.cleanup();
     this.isHost = true;
-    this.roomCode = roomCode || NetworkManager.generateRoomCode();
+
+    // Validate provided room code or generate a new one
+    if (roomCode) {
+      const cleanedCode = roomCode.trim().toUpperCase();
+      if (!/^F1-[A-Z0-9]{4}$/.test(cleanedCode)) {
+        if (this.onError) this.onError('Invalid room code format. Use format: F1-XXXX');
+        return;
+      }
+      this.roomCode = cleanedCode;
+    } else {
+      this.roomCode = NetworkManager.generateRoomCode();
+    }
     const peerId = NetworkManager.formatPeerId(this.roomCode);
 
     if (typeof window.Peer === 'undefined') {
@@ -124,7 +139,15 @@ export class NetworkManager {
   joinRoom(roomCode) {
     this.cleanup();
     this.isHost = false;
-    this.roomCode = roomCode.trim().toUpperCase();
+
+    // Validate room code format: F1-XXXX (4 alphanumeric chars) BEFORE any assignment/usage
+    const cleanedCode = roomCode.trim().toUpperCase();
+    if (!/^F1-[A-Z0-9]{4}$/.test(cleanedCode)) {
+      if (this.onError) this.onError('Invalid room code format. Use format: F1-XXXX');
+      return;
+    }
+
+    this.roomCode = cleanedCode;
     const targetPeerId = NetworkManager.formatPeerId(this.roomCode);
 
     if (typeof window.Peer === 'undefined') {

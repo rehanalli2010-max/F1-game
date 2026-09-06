@@ -46,106 +46,6 @@ export class SessionManager {
     }
   }
 
-  setTrack(track) {
-    this.track = track;
-    if (this.track && this.track.trackData && this.track.trackData.laps) {
-      this.raceLapsTotal = this.track.trackData.laps;
-    }
-  }
-
-  setAIGridManager(aiGridManager) {
-    this.aiGrid = aiGridManager;
-    if (this.aiGrid) {
-      this.aiGrid.setDifficulty(this.difficulty);
-    }
-  }
-
-  setDifficulty(diffMode) {
-    this.difficulty = diffMode;
-    if (this.aiGrid) {
-      this.aiGrid.setDifficulty(diffMode);
-    }
-  }
-
-  setRaceLapsTotal(laps) {
-    this.raceLapsTotal = Math.max(1, Math.min(20, laps));
-  }
-
-  setMultiplayerMode(isMP, isHost = false) {
-    this.isMultiplayer = isMP;
-    this.isHost = isHost;
-    if (this.aiGrid) {
-      this.aiGrid.setGuestRemote(isMP);
-    }
-  }
-
-  initSession(mode, playerVehicle, playerCar, qualifiedGrid = null, skipAd = false) {
-    // STRICT AD POLICY: Mock ads are entirely disabled in Multiplayer mode!
-    if (this.isMultiplayer) {
-      skipAd = true;
-    }
-
-    // If starting race and mock ad callback exists (single player only)
-    if (mode === SESSION_TYPES.RACE && !skipAd && this.ui.showMockAd) {
-      this.ui.showMockAd({
-        title: 'OFFICIAL BROADCAST SPONSOR',
-        sponsor: 'ROLEX',
-        subtitle: 'Formula 1 Grand Prix Starting Grid Live Broadcast',
-        buttonText: 'Skip to Starting Grid',
-        duration: 3000,
-        onFinish: () => {
-          this.executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid);
-        }
-      });
-      return;
-    }
-
-    this.executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid);
-  }
-
-  executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid = null) {
-    this.currentMode = mode;
-    this.clearAllTimers();
-    this.timing.reset();
-
-    if (this.timing) {
-      this.timing.onLapCompleteCallback = (lapResult) => this.handleLapComplete(lapResult);
-    }
-  }
-
-  setTrack(track) {
-    this.track = track;
-    if (this.track && this.track.trackData && this.track.trackData.laps) {
-      this.raceLapsTotal = this.track.trackData.laps;
-    }
-  }
-
-  setAIGridManager(aiGridManager) {
-    this.aiGrid = aiGridManager;
-    if (this.aiGrid) {
-      this.aiGrid.setDifficulty(this.difficulty);
-    }
-  }
-
-  setDifficulty(diffMode) {
-    this.difficulty = diffMode;
-    if (this.aiGrid) {
-      this.aiGrid.setDifficulty(diffMode);
-    }
-  }
-
-  setRaceLapsTotal(laps) {
-    this.raceLapsTotal = Math.max(1, Math.min(20, laps));
-  }
-
-  setMultiplayerMode(isMP, isHost = false) {
-    this.isMultiplayer = isMP;
-    this.isHost = isHost;
-    if (this.aiGrid) {
-      this.aiGrid.setGuestRemote(isMP);
-    }
-  }
-
   initSession(mode, playerVehicle, playerCar, qualifiedGrid = null, skipAd = false) {
     // STRICT AD POLICY: Mock ads are entirely disabled in Multiplayer mode!
     if (this.isMultiplayer) {
@@ -188,6 +88,39 @@ export class SessionManager {
       this.startPracticeSession(playerVehicle, playerCar);
     } else if (mode === SESSION_TYPES.RACE) {
       this.startRaceSession(playerVehicle, playerCar, qualifiedGrid);
+    }
+  }
+
+  setTrack(track) {
+    this.track = track;
+    if (this.track && this.track.trackData && this.track.trackData.laps) {
+      this.raceLapsTotal = this.track.trackData.laps;
+    }
+  }
+
+  setAIGridManager(aiGridManager) {
+    this.aiGrid = aiGridManager;
+    if (this.aiGrid) {
+      this.aiGrid.setDifficulty(this.difficulty);
+    }
+  }
+
+  setDifficulty(diffMode) {
+    this.difficulty = diffMode;
+    if (this.aiGrid) {
+      this.aiGrid.setDifficulty(diffMode);
+    }
+  }
+
+  setRaceLapsTotal(laps) {
+    this.raceLapsTotal = Math.max(1, Math.min(20, laps));
+  }
+
+  setMultiplayerMode(isMP, isHost = false) {
+    this.isMultiplayer = isMP;
+    this.isHost = isHost;
+    if (this.aiGrid) {
+      this.aiGrid.setGuestRemote(isMP);
     }
   }
 
@@ -337,7 +270,9 @@ export class SessionManager {
         this.ui.showAlert('LIGHTS OUT AND AWAY WE GO!', 2500, 'alert-flying-lap');
       }
       if (this.ui.setStartLightsVisible) {
-        setTimeout(() => this.ui.setStartLightsVisible(false), 800);
+        this._guestLightsHideTimer = setTimeout(() => {
+          if (this.ui.setStartLightsVisible) this.ui.setStartLightsVisible(false);
+        }, 800);
       }
       if (this.ui.updateSessionBadge) {
         this.ui.updateSessionBadge('RACE', `LAP 1/${this.raceLapsTotal}`);
@@ -377,7 +312,8 @@ if (this.aiGrid) {
 
               // Allow trailing cars up to 15s to cross the line before closing the race
               this.finishTimeout = setTimeout(() => {
-                if (this.raceState !== 'FINISHED') {
+                // Guard against stale timeout firing after session cleanup/state change
+                if (this.raceState === 'FINISHING') {
                   this.finishRace();
                 }
               }, 15000);
@@ -530,6 +466,10 @@ if (this.aiGrid) {
       clearTimeout(this._hideLightsTimer);
       this._hideLightsTimer = null;
     }
+    if (this._guestLightsHideTimer) {
+      clearTimeout(this._guestLightsHideTimer);
+      this._guestLightsHideTimer = null;
+    }
     if (this.ui && this.ui.setStartLightsVisible) {
       this.ui.setStartLightsVisible(false);
       this.ui.updateGantryBulbs(0);
@@ -548,6 +488,10 @@ if (this.aiGrid) {
     if (this._hideLightsTimer) {
       clearTimeout(this._hideLightsTimer);
       this._hideLightsTimer = null;
+    }
+    if (this._guestLightsHideTimer) {
+      clearTimeout(this._guestLightsHideTimer);
+      this._guestLightsHideTimer = null;
     }
     if (this.currentMode === SESSION_TYPES.PRACTICE) {
       if (this.ui && this.ui.setStartLightsVisible) {

@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js --open",
-    "serve": "node server.js"
+    "serve": "node server.js",
+    "fast-start": "node server.js --open",
+    "dev": "node server.js --open"
   },
   "keywords": [
     "threejs",

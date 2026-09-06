@@ -1088,6 +1088,110 @@ html, body {
 }
 
 /* ==========================================================================
+   G-FORCE RADAR (F1 Broadcast Style - Curvy Rounded Square Design)
+   ========================================================================== */
+
+.gforce-radar-card {
+  background: linear-gradient(145deg, rgba(16, 20, 29, 0.94) 0%, rgba(10, 13, 19, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
+  border-radius: 18px; /* Curvy rounded square edges */
+  padding: 10px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gforce-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.gforce-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gforce-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  animation: pulse-gforce 1.4s infinite ease-in-out;
+}
+
+@keyframes pulse-gforce {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+.gforce-title {
+  font-family: var(--f1-font-title);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #cfd8dc;
+  text-transform: uppercase;
+}
+
+.gforce-peak-badge {
+  font-family: var(--f1-font-digital);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.12);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+#gforce-radar-canvas {
+  width: 170px;
+  height: 170px;
+  display: block;
+  border-radius: 16px; /* Curvy square canvas */
+  background: rgba(4, 6, 12, 0.65);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 1024px) {
+  .gforce-radar-card {
+    padding: 8px;
+    border-radius: 16px;
+  }
+  #gforce-radar-canvas {
+    width: 135px;
+    height: 135px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gforce-radar-card {
+    padding: 6px;
+    border-radius: 14px;
+  }
+  #gforce-radar-canvas {
+    width: 105px;
+    height: 105px;
+    border-radius: 12px;
+  }
+}
+
+/* ==========================================================================
    MODALS: QUALIFYING RESULTS, RACE PODIUM, HELP
    ========================================================================== */
 

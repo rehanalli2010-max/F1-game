@@ -503,6 +503,38 @@ export class AICar {
     this.lateralOffset += (this.targetOffset - this.lateralOffset) * Math.min(1.0, dt * laneSpeed);
     this.lateralOffset = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, this.lateralOffset));
 
+    // PHYSICAL COLLISION RESOLUTION: Prevent AI cars from ghosting through each other
+    // Check for overlapping AI cars and apply lateral separation forces
+    for (const other of allCars) {
+      if (other === this || other.isPlayer) continue; // Only resolve AI vs AI collisions
+      if (!other.active || !other.vehicle || !other.vehicle.body) continue;
+
+      const oPos = other.getPosition();
+      const dx = oPos.x - pos.x;
+      const dz = oPos.z - pos.z;
+      const distSq = dx * dx + dz * dz;
+      const minDist = 2.8; // Minimum separation distance (car width ~2.0m + safety margin)
+
+      if (distSq < minDist * minDist && distSq > 0.01) {
+        const dist = Math.sqrt(distSq);
+        // Push away from the other car
+        const pushForce = (minDist - dist) / minDist * 3.5; // Separation force strength
+        const pushX = (dx / dist) * pushForce * dt * 10;
+        const pushZ = (dz / dist) * pushForce * dt * 10;
+
+        // Apply separation to lateral offset (affects desired racing line)
+        const lateralPush = (dx * newNorm.x + dz * newNorm.z) > 0 ? pushForce : -pushForce;
+        this.lateralOffset -= lateralPush * dt * 8.0;
+        this.lateralOffset = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, this.lateralOffset));
+
+        // Also apply a small velocity correction to the physics body for immediate effect
+        if (body && body.velocity) {
+          body.velocity.x -= pushX * 0.3;
+          body.velocity.z -= pushZ * 0.3;
+        }
+      }
+    }
+
     // 3. Proximity Pacing & Speed Management (NEVER stall to 0 km/h on track!)
     let safeSpeedCap = Infinity;
     if (carAheadDist < 6.0 && Math.abs(carAheadLat) < 1.6) {

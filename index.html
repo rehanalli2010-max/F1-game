@@ -8,6 +8,18 @@
   <link rel="stylesheet" href="css/style.css?v=400">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>">
 
+  <!-- Preload critical resources for faster startup -->
+  <link rel="preload" href="/js/vendor/three.module.min.js" as="script" crossorigin>
+  <link rel="preload" href="/js/vendor/cannon-es.js" as="script" crossorigin>
+  <link rel="preload" href="/js/vendor/peerjs.min.js" as="script" crossorigin>
+  <link rel="preload" href="/js/main.js" as="script" crossorigin>
+  <link rel="preload" href="/css/style.css" as="style" crossorigin>
+  <link rel="preload" href="/assets/models/ferrari.glb" as="model" type="model/gltf-binary" crossorigin>
+  <link rel="preload" href="/assets/models/redbull.glb" as="model" type="model/gltf-binary" crossorigin>
+
+  <!-- Preconnect for faster resource fetching -->
+  <link rel="preconnect" href="http://localhost:3000" crossorigin>
+
   <!-- PeerJS WebRTC P2P DataChannel Library (Local zero-latency) -->
   <script src="js/vendor/peerjs.min.js" defer></script>
 
@@ -307,6 +319,18 @@
           <div class="drs-badge" id="drs-badge" data-i18n="hud_drs">DRS</div>
           <div class="drift-badge" id="drift-badge" style="display:none;" data-i18n="hud_drift">DRIFT</div>
         </div>
+
+        <!-- G-Force Radar (Curvy Rounded Square with Center 'G' & Live Telemetry) -->
+        <div class="gforce-radar-card" id="gforce-radar-card">
+          <div class="gforce-header">
+            <div class="gforce-title-row">
+              <span class="gforce-live-dot"></span>
+              <span class="gforce-title">G-FORCE RADAR</span>
+            </div>
+            <div class="gforce-peak-badge" id="gforce-peak-badge">PEAK 0.0G</div>
+          </div>
+          <canvas id="gforce-radar-canvas" title="F1 Live G-Force Radar"></canvas>
+        </div>
       </div>
     </footer>
 
@@ -597,6 +621,6 @@
   </div>
 
   <!-- Main Game Script Entry Point -->
-  <script type="module" src="js/main.js?v=648"></script>
+  <script type="module" src="js/main.js?v=651"></script>
 </body>
 </html>

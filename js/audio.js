@@ -32,6 +32,7 @@ export class AudioManager {
     this.turboBoost = 0; // 0 to 1
     this.lastPopTime = 0;
     this._lastImpactAt = 0;
+    this._resumeAttempted = false;
 
     // Harmonic Combustion Oscillators
     this.oscFund = null;    // Firing order fundamental (f0 = RPM/60 * 3)
@@ -454,7 +455,10 @@ export class AudioManager {
     if (!this.isInitialized || !this.ctx || this.isMuted) return;
 
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      if (!this._resumeAttempted) {
+        this._resumeAttempted = true;
+        this.ctx.resume().catch(() => {});
+      }
     }
 
     const t = this.ctx.currentTime;

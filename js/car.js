@@ -68,6 +68,51 @@ const BODY_LENGTH_TARGET = 4.4;
 const HIDE_GLB_MESH_PREFIXES = ['wheel', 'tire', 'tyre', 'brake', 'rim', 'hub', 'suspension', 'wishbone'];
 
 const _gltfCache = new Map();
+const MAX_GLTF_CACHE_SIZE = 10; // Limit cache to prevent unbounded memory growth
+
+/**
+ * Clears the GLB model cache, disposing all geometries and materials.
+ * Call this when switching tracks/cars to prevent memory leaks.
+ */
+export function clearGltfCache() {
+  for (const [url, root] of _gltfCache) {
+    root.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+  }
+  _gltfCache.clear();
+}
+
+/**
+ * Adds a model to the cache with LRU eviction if cache exceeds max size.
+ * @param {string} url - The GLB URL
+ * @param {THREE.Group} root - The loaded model root
+ */
+function _cacheGltfModel(url, root) {
+  // If already exists, move to end (most recently used)
+  if (_gltfCache.has(url)) {
+    _gltfCache.delete(url);
+  } else if (_gltfCache.size >= MAX_GLTF_CACHE_SIZE) {
+    // Evict least recently used (first entry)
+    const firstKey = _gltfCache.keys().next().value;
+    const evicted = _gltfCache.get(firstKey);
+    if (evicted) {
+      evicted.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+          else obj.material.dispose();
+        }
+      });
+    }
+    _gltfCache.delete(firstKey);
+  }
+  _gltfCache.set(url, root);
+}
 
 /**
  * Creates a clearcoat carbon-fiber PBR material using MeshPhysicalMaterial
@@ -724,7 +769,7 @@ async function loadGltfModelAsync(url) {
       url,
       (gltf) => {
         const root = gltf.scene || gltf.scenes[0];
-        _gltfCache.set(url, root);
+        _cacheGltfModel(url, root);
         resolve(root.clone(true));
       },
       undefined,
@@ -1693,6 +1738,7 @@ export class F1Car {
 
   dispose() {
     this._clearGlbBody();
+    clearGltfCache(); // Clear global GLB cache on dispose
 
     // Dispose visual body meshes, geometries, materials
     this.visualBody.traverse((child) => {

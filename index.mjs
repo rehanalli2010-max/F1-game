@@ -4,7 +4,7 @@ import "dotenv/config";
 const apiKey = process.env.EXPLABS_API_KEY;
 
 if (!apiKey) {
-  throw new Error("EXPLABS_API_KEY is not set in your .env file");
+  throw new Error("EXPLABS_API_KEY is not set. Please create one under Settings -> API keys and export it.");
 }
 
 const client = new OpenAI({
@@ -22,4 +22,5 @@ const response = await client.chat.completions.create({
   ],
 });
 
-console.log(response.choices[0].message.content);
+console.log("Reply:", response.choices[0].message.content);
+console.log("Usage:", response.usage);

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import readline from "readline";
 import fs from "fs/promises";
 import path from "path";
+import "dotenv/config";
 
 /*
 ========================================================
@@ -11,13 +12,19 @@ Your API credentials come from PowerShell environment
 variables:
 
 EXPLABS_API_KEY
-EXPLABS_BASE_URL
 ========================================================
 */
 
+const apiKey = process.env.EXPLABS_API_KEY;
+
+if (!apiKey) {
+  console.error("EXPLABS_API_KEY is not set. Please create one under Settings -> API keys and export it.");
+  process.exit(1);
+}
+
 const client = new OpenAI({
-  apiKey: process.env.EXPLABS_API_KEY,
-  baseURL: process.env.EXPLABS_BASE_URL
+  apiKey: apiKey,
+  baseURL: "https://api.experientiallabs.ai/v1"
 });
 
 /*

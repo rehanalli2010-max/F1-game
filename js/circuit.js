@@ -46,6 +46,9 @@ export class Track {
     }
     this.physicsBodies = [];
     this.animatedFlags = [];
+    // Clear spatial grid to prevent memory leaks
+    this._terrainGrid = null;
+    this._terrainCellSize = 20.0;
 
     // 2. Traverse and dispose Three.js meshes, geometries, and materials
     if (this.trackRoot) {
@@ -145,6 +148,22 @@ export class Track {
       this.sampledPoints.push(pt);
       this.sampledTangents.push(tgt);
     }
+
+    // Build spatial grid for O(1) terrain height queries
+    // Grid cell size = 20m, covering typical track bounds
+    this._terrainGrid = new Map();
+    const cellSize = 20.0;
+    for (let i = 0; i < this.sampledPoints.length; i++) {
+      const p = this.sampledPoints[i];
+      const gx = Math.floor(p.x / cellSize);
+      const gz = Math.floor(p.z / cellSize);
+      const key = `${gx},${gz}`;
+      if (!this._terrainGrid.has(key)) {
+        this._terrainGrid.set(key, []);
+      }
+      this._terrainGrid.get(key).push({ idx: i, x: p.x, z: p.z, y: p.y });
+    }
+    this._terrainCellSize = cellSize;
   }
 
   generateCheckpoints() {
@@ -275,28 +294,57 @@ export class Track {
    * guaranteeing that the green terrain never clips over the track surface
    * at Eau Rouge, Raidillon, Pouhon, or on any 3D undulating circuit,
    * and carves realistic terraced spectator pads beneath grandstands.
+   * Optimized with spatial grid for O(1) nearest-neighbor lookup.
    */
   getTerrainHeight(x, z) {
     const pts = this.sampledPoints;
     if (!pts || pts.length === 0) return -0.05;
 
-    const count = pts.length;
-    let minDistSq = Infinity;
-    let bestIdx = 0;
+    // Fast spatial grid lookup - check local cell and neighbors
+    const cellSize = this._terrainCellSize || 20.0;
+    const gx = Math.floor(x / cellSize);
+    const gz = Math.floor(z / cellSize);
 
-    for (let i = 0; i < count; i++) {
-      const p = pts[i];
-      const dx = p.x - x;
-      const dz = p.z - z;
-      const dSq = dx * dx + dz * dz;
-      if (dSq < minDistSq) {
-        minDistSq = dSq;
-        bestIdx = i;
+    let bestIdx = -1;
+    let minDistSq = Infinity;
+
+    // Search 3x3 neighboring cells for closest track point
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const key = `${gx + dx},${gz + dz}`;
+        const cellPts = this._terrainGrid?.get(key);
+        if (cellPts) {
+          for (const p of cellPts) {
+            const dpx = p.x - x;
+            const dpz = p.z - z;
+            const dSq = dpx * dpx + dpz * dpz;
+            if (dSq < minDistSq) {
+              minDistSq = dSq;
+              bestIdx = p.idx;
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback: if no points in grid (shouldn't happen), use full search
+    if (bestIdx === -1) {
+      const count = pts.length;
+      for (let i = 0; i < count; i++) {
+        const p = pts[i];
+        const dx = p.x - x;
+        const dz = p.z - z;
+        const dSq = dx * dx + dz * dz;
+        if (dSq < minDistSq) {
+          minDistSq = dSq;
+          bestIdx = i;
+        }
       }
     }
 
     const dist = Math.sqrt(minDistSq);
     const pt = pts[bestIdx];
+    const count = pts.length;
     const halfW = (this.trackWidth || 16.0) / 2;
     const roadClearance = halfW + 4.5;
 
@@ -430,71 +478,110 @@ export class Track {
     posAttr.needsUpdate = true;
     groundGeo.computeVertexNormals();
 
-    const groundCanvas = document.createElement('canvas');
-    groundCanvas.width = 512;
-    groundCanvas.height = 512;
-    const gctx = groundCanvas.getContext('2d');
-
-    const baseHex = '#' + (theme.groundColor || 0x2e6b35).toString(16).padStart(6, '0');
-    const detailHex = '#' + (theme.groundDetailColor || 0x24542a).toString(16).padStart(6, '0');
-
-    gctx.fillStyle = baseHex;
-    gctx.fillRect(0, 0, 512, 512);
-
-    if (theme.groundType === 'DESERT_SAND') {
-      // Golden desert wavy sand ripple pattern
-      gctx.fillStyle = detailHex;
-      for (let y = 0; y < 512; y += 32) {
-        gctx.beginPath();
-        gctx.moveTo(0, y);
-        for (let x = 0; x <= 512; x += 16) {
-          gctx.lineTo(x, y + Math.sin(x * 0.08) * 8);
-        }
-        gctx.lineTo(512, y + 16);
-        gctx.lineTo(0, y + 16);
-        gctx.fill();
-      }
-    } else if (theme.groundType === 'URBAN_ASPHALT' || theme.groundType === 'CITY_PROMENADE') {
-      // Urban paving stone tiles
-      gctx.fillStyle = detailHex;
-      for (let x = 0; x < 512; x += 64) {
-        for (let y = 0; y < 512; y += 64) {
-          if ((x / 64 + y / 64) % 2 === 0) {
-            gctx.fillRect(x + 2, y + 2, 60, 60);
-          }
-        }
-      }
-    } else if (theme.groundType === 'MARINA_HARBOR') {
-      // Mediterranean harbor promenade pavers & textured maritime waterfront
-      gctx.fillStyle = detailHex;
-      for (let x = 0; x < 512; x += 32) {
-        for (let y = 0; y < 512; y += 32) {
-          if ((x / 32 + y / 32) % 2 === 0) {
-            gctx.fillRect(x + 1, y + 1, 30, 30);
-          }
-        }
-      }
-      // Paved harbor pier curb lines
-      gctx.strokeStyle = '#2d3748';
-      gctx.lineWidth = 2;
-      for (let x = 0; x <= 512; x += 128) {
-        gctx.beginPath();
-        gctx.moveTo(x, 0);
-        gctx.lineTo(x, 512);
-        gctx.stroke();
-      }
-    } else {
-      // Standard mowing lawn stripes
-      gctx.fillStyle = detailHex;
-      for (let y = 0; y < 512; y += 64) {
-        gctx.fillRect(0, y, 512, 32);
-      }
+    // Select appropriate grass texture variant based on track groundType
+    let grassVariant = 'standard';
+    switch (theme.groundType) {
+      case 'PARK_GRASS':
+        grassVariant = 'park';
+        break;
+      case 'COUNTRY_GRASS':
+        grassVariant = 'country';
+        break;
+      case 'FOREST_TERRAIN':
+        grassVariant = 'forest';
+        break;
+      case 'TECHNICAL_RUNOFF':
+        grassVariant = 'technical';
+        break;
+      case 'TROPICAL_GRASS':
+        grassVariant = 'tropical';
+        break;
+      case 'ALPINE_HILLS':
+        grassVariant = 'alpine';
+        break;
+      case 'DESERT_SAND':
+      case 'URBAN_ASPHALT':
+      case 'CITY_PROMENADE':
+      case 'MARINA_HARBOR':
+        grassVariant = null; // Use custom canvas texture for these
+        break;
+      default:
+        grassVariant = 'standard';
     }
 
-    const groundTex = new THREE.CanvasTexture(groundCanvas);
-    groundTex.wrapS = THREE.RepeatWrapping;
-    groundTex.wrapT = THREE.RepeatWrapping;
-    groundTex.repeat.set(48, 48);
+    let groundTex;
+    if (grassVariant) {
+      // Use high-quality procedural grass texture from TextureFactory
+      groundTex = TextureFactory.createGrassTexture(grassVariant);
+      groundTex.repeat.set(32, 32); // Appropriate repeat for 2600m terrain
+    } else {
+      // Fallback to canvas-based texture for special ground types
+      const groundCanvas = document.createElement('canvas');
+      groundCanvas.width = 512;
+      groundCanvas.height = 512;
+      const gctx = groundCanvas.getContext('2d');
+
+      const baseHex = '#' + (theme.groundColor || 0x2e6b35).toString(16).padStart(6, '0');
+      const detailHex = '#' + (theme.groundDetailColor || 0x24542a).toString(16).padStart(6, '0');
+
+      gctx.fillStyle = baseHex;
+      gctx.fillRect(0, 0, 512, 512);
+
+      if (theme.groundType === 'DESERT_SAND') {
+        // Golden desert wavy sand ripple pattern
+        gctx.fillStyle = detailHex;
+        for (let y = 0; y < 512; y += 32) {
+          gctx.beginPath();
+          gctx.moveTo(0, y);
+          for (let x = 0; x <= 512; x += 16) {
+            gctx.lineTo(x, y + Math.sin(x * 0.08) * 8);
+          }
+          gctx.lineTo(512, y + 16);
+          gctx.lineTo(0, y + 16);
+          gctx.fill();
+        }
+      } else if (theme.groundType === 'URBAN_ASPHALT' || theme.groundType === 'CITY_PROMENADE') {
+        // Urban paving stone tiles
+        gctx.fillStyle = detailHex;
+        for (let x = 0; x < 512; x += 64) {
+          for (let y = 0; y < 512; y += 64) {
+            if ((x / 64 + y / 64) % 2 === 0) {
+              gctx.fillRect(x + 2, y + 2, 60, 60);
+            }
+          }
+        }
+      } else if (theme.groundType === 'MARINA_HARBOR') {
+        // Mediterranean harbor promenade pavers & textured maritime waterfront
+        gctx.fillStyle = detailHex;
+        for (let x = 0; x < 512; x += 32) {
+          for (let y = 0; y < 512; y += 32) {
+            if ((x / 32 + y / 32) % 2 === 0) {
+              gctx.fillRect(x + 1, y + 1, 30, 30);
+            }
+          }
+        }
+        // Paved harbor pier curb lines
+        gctx.strokeStyle = '#2d3748';
+        gctx.lineWidth = 2;
+        for (let x = 0; x <= 512; x += 128) {
+          gctx.beginPath();
+          gctx.moveTo(x, 0);
+          gctx.lineTo(x, 512);
+          gctx.stroke();
+        }
+      } else {
+        // Standard mowing lawn stripes
+        gctx.fillStyle = detailHex;
+        for (let y = 0; y < 512; y += 64) {
+          gctx.fillRect(0, y, 512, 32);
+        }
+      }
+
+      groundTex = new THREE.CanvasTexture(groundCanvas);
+      groundTex.wrapS = THREE.RepeatWrapping;
+      groundTex.wrapT = THREE.RepeatWrapping;
+      groundTex.repeat.set(48, 48);
+    }
 
     const groundMat = new THREE.MeshStandardMaterial({
       map: groundTex,

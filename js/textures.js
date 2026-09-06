@@ -1027,6 +1027,176 @@ export class TextureFactory {
   }
 
   /**
+   * Generates realistic grass texture with natural variation, blades, and organic feel
+   */
+  static createGrassTexture(variant = 'standard') {
+    const cacheKey = `grass_texture_${variant}`;
+    if (_textureCache.has(cacheKey)) return _textureCache.get(cacheKey);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    // Fast grass texture generation using ImageData
+    const imgData = ctx.createImageData(1024, 1024);
+    const data32 = new Uint32Array(imgData.data.buffer);
+    const totalPixels = 1024 * 1024;
+
+    let baseColor, highlightColor, shadowColor, bladeColor;
+
+    switch (variant) {
+      case 'standard':
+      case 'park':
+        // Classic park grass - vibrant green
+        baseColor = 0x2e6b35;      // #2e6b35
+        highlightColor = 0x4a9c4f; // lighter green
+        shadowColor = 0x1e4d24;    // darker green
+        bladeColor = 0x3a7d3f;     // blade color
+        break;
+      case 'country':
+        // Silverstone style - lush countryside grass
+        baseColor = 0x3d7a42;      // #3d7a42
+        highlightColor = 0x5a9b5e;
+        shadowColor = 0x2a5a2e;
+        bladeColor = 0x458549;
+        break;
+      case 'forest':
+        // Spa style - darker forest grass
+        baseColor = 0x22482c;      // #22482c
+        highlightColor = 0x356b3e;
+        shadowColor = 0x15301a;
+        bladeColor = 0x2a5532;
+        break;
+      case 'technical':
+        // Suzuka style - technical runoff grass
+        baseColor = 0x3b6e44;      // #3b6e44
+        highlightColor = 0x528a5b;
+        shadowColor = 0x284d2e;
+        bladeColor = 0x437d4c;
+        break;
+      case 'tropical':
+        // Interlagos style - tropical grass
+        baseColor = 0x226b38;      // #226b38
+        highlightColor = 0x3a8a4f;
+        shadowColor = 0x164e28;
+        bladeColor = 0x2d7a42;
+        break;
+      case 'alpine':
+        // Red Bull Ring style - alpine meadow
+        baseColor = 0x2d6a4f;      // #2d6a4f
+        highlightColor = 0x458a63;
+        shadowColor = 0x1b4332;
+        bladeColor = 0x367858;
+        break;
+      default:
+        baseColor = 0x2e6b35;
+        highlightColor = 0x4a9c4f;
+        shadowColor = 0x1e4d24;
+        bladeColor = 0x3a7d3f;
+    }
+
+    // Extract RGB components
+    const baseR = (baseColor >> 16) & 0xFF;
+    const baseG = (baseColor >> 8) & 0xFF;
+    const baseB = baseColor & 0xFF;
+
+    const highlightR = (highlightColor >> 16) & 0xFF;
+    const highlightG = (highlightColor >> 8) & 0xFF;
+    const highlightB = highlightColor & 0xFF;
+
+    const shadowR = (shadowColor >> 16) & 0xFF;
+    const shadowG = (shadowColor >> 8) & 0xFF;
+    const shadowB = shadowColor & 0xFF;
+
+    // Fill with base grass color
+    const basePixel = (0xFF << 24) | (baseB << 16) | (baseG << 8) | baseR;
+    data32.fill(basePixel);
+
+    // Add organic noise variation (simulates soil/color variation)
+    for (let i = 0; i < 150000; i++) {
+      const idx = Math.floor(Math.random() * totalPixels);
+      const variation = Math.floor((Math.random() - 0.5) * 30);
+      const r = Math.max(0, Math.min(255, baseR + variation));
+      const g = Math.max(0, Math.min(255, baseG + variation + 5));
+      const b = Math.max(0, Math.min(255, baseB + variation - 3));
+      data32[idx] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+    }
+
+    // Add grass blade streaks (vertical lines for mowed grass look)
+    const bladeCount = variant === 'park' ? 800 : 600;
+    for (let i = 0; i < bladeCount; i++) {
+      const x = Math.floor(Math.random() * 1024);
+      const y = Math.floor(Math.random() * 1024);
+      const length = 3 + Math.floor(Math.random() * 6);
+      const intensity = 0.3 + Math.random() * 0.4;
+
+      for (let l = 0; l < length; l++) {
+        const py = (y + l) % 1024;
+        const idx = py * 1024 + x;
+        if (idx < totalPixels) {
+          const r = Math.max(0, Math.min(255, baseR + Math.floor((highlightR - baseR) * intensity)));
+          const g = Math.max(0, Math.min(255, baseG + Math.floor((highlightG - baseG) * intensity)));
+          const b = Math.max(0, Math.min(255, baseB + Math.floor((highlightB - baseB) * intensity)));
+          data32[idx] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+        }
+      }
+    }
+
+    // Add darker patches (shadows, wet spots, wear)
+    const patchCount = variant === 'forest' ? 200 : 120;
+    for (let i = 0; i < patchCount; i++) {
+      const cx = Math.floor(Math.random() * 1024);
+      const cy = Math.floor(Math.random() * 1024);
+      const radius = 8 + Math.floor(Math.random() * 20);
+
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= radius) {
+            const px = (cx + dx + 1024) % 1024;
+            const py = (cy + dy + 1024) % 1024;
+            const idx = py * 1024 + px;
+            const falloff = 1 - dist / radius;
+            const r = Math.max(0, Math.min(255, baseR + Math.floor((shadowR - baseR) * falloff * 0.6)));
+            const g = Math.max(0, Math.min(255, baseG + Math.floor((shadowG - baseG) * falloff * 0.6)));
+            const b = Math.max(0, Math.min(255, baseB + Math.floor((shadowB - baseB) * falloff * 0.6)));
+            data32[idx] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+          }
+        }
+      }
+    }
+
+    // Add mowing stripes for park/country variants
+    if (variant === 'park' || variant === 'country' || variant === 'alpine') {
+      const stripeWidth = 32;
+      for (let y = 0; y < 1024; y += stripeWidth * 2) {
+        const stripeIntensity = variant === 'alpine' ? 0.15 : 0.1;
+        for (let sy = 0; sy < stripeWidth; sy++) {
+          const py = (y + sy) % 1024;
+          for (let x = 0; x < 1024; x++) {
+            const idx = py * 1024 + x;
+            const r = Math.max(0, Math.min(255, baseR + Math.floor((highlightR - baseR) * stripeIntensity)));
+            const g = Math.max(0, Math.min(255, baseG + Math.floor((highlightG - baseG) * stripeIntensity)));
+            const b = Math.max(0, Math.min(255, baseB + Math.floor((highlightB - baseB) * stripeIntensity)));
+            data32[idx] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(16, 16);
+    tex.anisotropy = 8;
+    _textureCache.set(cacheKey, tex);
+    return tex;
+  }
+
+  /**
    * Generates realistic Grand Prix daytime skydome texture with cumulus clouds and atmospheric haze
    */
   static createDaytimeSkyTexture() {

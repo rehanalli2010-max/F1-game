@@ -15,6 +15,11 @@ export class PhysicsWorld {
     this.world.defaultContactMaterial.friction = 0.0;
     this.world.defaultContactMaterial.restitution = 0.0;
 
+    // Fixed timestep configuration
+    this.fixedTimeStep = 1 / 60; // 60 Hz physics simulation
+    this.maxSubSteps = 5;        // Maximum sub-steps per frame (for spiral of death prevention)
+    this.accumulator = 0;        // Time accumulator for fixed timestep
+
     // Track surface check callback (provided by Track)
     this.isOnTrackCallback = null;
     this.track = null;
@@ -249,13 +254,18 @@ export class PhysicsWorld {
     } else {
       const gearIndex = Math.max(0, Math.min(this.gearRatios.length - 1, (vehicle.currentGear || 1) - 1));
       const currentGearData = this.gearRatios[gearIndex];
-      const gearRange = Math.max(1, currentGearData.maxSpeed - currentGearData.minSpeed);
-      const speedInGear = Math.max(0, speedKmh - currentGearData.minSpeed);
-      const rpmFraction = Math.min(1.0, speedInGear / gearRange);
-      const idleRpm = throttle > 0.1 ? 6000 : 4200;
-      vehicle.rpm = idleRpm + rpmFraction * 7800 + (throttle * 1200);
-      if (vehicle.rpm > 13500) vehicle.rpm = 13500;
-      if (!Number.isFinite(vehicle.rpm)) vehicle.rpm = 4200;
+      // Safety: ensure gear data exists and has valid range
+      if (!currentGearData || !Number.isFinite(currentGearData.maxSpeed) || !Number.isFinite(currentGearData.minSpeed)) {
+        vehicle.rpm = 4200;
+      } else {
+        const gearRange = Math.max(1, currentGearData.maxSpeed - currentGearData.minSpeed);
+        const speedInGear = Math.max(0, speedKmh - currentGearData.minSpeed);
+        const rpmFraction = Math.min(1.0, speedInGear / gearRange);
+        const idleRpm = throttle > 0.1 ? 6000 : 4200;
+        vehicle.rpm = idleRpm + rpmFraction * 7800 + (throttle * 1200);
+        if (vehicle.rpm > 13500) vehicle.rpm = 13500;
+        if (!Number.isFinite(vehicle.rpm)) vehicle.rpm = 4200;
+      }
     }
 
     // 5. AAA DYNAMIC STEERING & PROGRESSIVE YAW CONTROL
@@ -368,10 +378,25 @@ export class PhysicsWorld {
   }
 
   /**
-   * Step physics simulation
+   * Step physics simulation using fixed timestep with accumulator pattern.
+   * This ensures consistent physics behavior regardless of frame rate.
+   * @param {number} dt - Delta time in seconds from the render loop
    */
   step(dt) {
-    this.world.step(1 / 60, dt, 5);
+    // Accumulate time
+    this.accumulator += dt;
+
+    // Clamp accumulator to prevent spiral of death (max 5 frames worth)
+    const maxAccumulator = this.fixedTimeStep * this.maxSubSteps;
+    if (this.accumulator > maxAccumulator) {
+      this.accumulator = maxAccumulator;
+    }
+
+    // Step physics at fixed timestep while we have accumulated time
+    while (this.accumulator >= this.fixedTimeStep) {
+      this.world.step(this.fixedTimeStep, 0, 1); // fixedTimeStep, maxSubSteps=0 (we handle substeps manually), timeSinceLastCall=1 (dummy)
+      this.accumulator -= this.fixedTimeStep;
+    }
   }
 
   resetVehicle(vehicle, x, y, z, yawAngle = 0, initialForwardSpeed = 0) {

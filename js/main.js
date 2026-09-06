@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=41';
-import { F1Car } from './car.js?v=33';
+import { F1Car, clearGltfCache } from './car.js?v=33';
 import { PhysicsWorld } from './physics.js?v=63';
 import { Track } from './circuit.js?v=331';
 import { TimingSystem } from './timing.js?v=352';
@@ -13,20 +13,23 @@ import { F1_TEAMS, getTeamById } from './teams_db.js?v=101';
 import { EffectsManager } from './fx.js?v=51';
 import { i18n, SUPPORTED_LANGUAGES } from './i18n.js';
 
+
 /**
  * HTML Sanitization helper against XSS in dynamic DOM string interpolations
+ * Handles: & < > ' " ` / (backtick and forward slash for template literal / regex injection protection)
  */
 function escapeHtml(str) {
   if (typeof str !== 'string') return String(str ?? '');
-  return str.replace(/[&<>'"]/g, tag => ({
+  return str.replace(/[&<>'"`\/]/g, tag => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     "'": '&#39;',
-    '"': '&quot;'
+    '"': '&quot;',
+    '`': '&#96;',
+    '/': '&#x2F;'
   }[tag] || tag));
 }
-
 /**
  * Main Application Orchestrator for Phase 4 3D F1 Racing Game with P2P Multiplayer
  */
@@ -38,7 +41,13 @@ class F1Game {
     this.canvas = document.getElementById('webgl-canvas');
     this.clock = new THREE.Clock();
     this.currentTrackId = 'monza';
-    this.currentTeamId = localStorage.getItem('f1_player_team') || 'ferrari';
+    let savedTeam = 'ferrari';
+    try {
+      savedTeam = localStorage.getItem('f1_player_team') || 'ferrari';
+    } catch (e) {
+      // Ignore localStorage access errors (e.g. security isolation)
+    }
+    this.currentTeamId = savedTeam;
 
     // Core Subsystems
     this.audio = new AudioManager();
@@ -69,21 +78,29 @@ class F1Game {
 
     this.keys = {};
 
+    // Race start tracking
+    this.raceLaunched = false;
+
     this.initThree();
     this.initTrack();
     this.initVehicles();
     this.initTimingAndSession();
     this.initMinimap();
+    this.initGForceRadar();
     this.initInputs();
     this.initMobileControls();
     this.initUI();
     this.i18n.updateDOM();
     this.initNetwork();
 
-    // Start rendering
+    // Start rendering AFTER all initialization is complete
     window.addEventListener('resize', () => this.onWindowResize());
     this.clock.start();
-    requestAnimationFrame((t) => this.animate(t));
+    // Use setTimeout to ensure RAF starts after the current call stack clears
+    // and all init methods have fully completed their synchronous work
+    setTimeout(() => {
+      requestAnimationFrame((t) => this.animate(t));
+    }, 0);
   }
 
   initThree() {
@@ -385,6 +402,353 @@ class F1Game {
     ctx.stroke();
   }
 
+  initGForceRadar() {
+    this.gforceCanvas = document.getElementById('gforce-radar-canvas');
+    if (!this.gforceCanvas) return;
+    this.gfCtx = this.gforceCanvas.getContext('2d');
+    this.gforcePeakBadge = document.getElementById('gforce-peak-badge');
+
+    // Set up high-DPI canvas (170x170 logical pixels)
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    const size = 170;
+    this.gforceCanvas.width = size * dpr;
+    this.gforceCanvas.height = size * dpr;
+    this.gfCtx.scale(dpr, dpr);
+
+    // G-force history for smooth trails
+    this.gforceHistory = [];
+    this.maxHistoryLength = 18;
+
+    // Current G-forces
+    this.currentLatG = 0;
+    this.currentLonG = 0;
+    this.smoothedLatG = 0;
+    this.smoothedLonG = 0;
+    this.peakG = 0;
+  }
+
+  /**
+   * Helper to get curated F1 telemetry color by G magnitude
+   */
+  getGColor(mag) {
+    if (mag >= 4.5) return '#ff1e56'; // Violent crimson red / magenta
+    if (mag >= 3.2) return '#ff5722'; // High orange-red
+    if (mag >= 2.0) return '#f59e0b'; // Formula amber
+    if (mag >= 1.0) return '#10b981'; // Vibrant green
+    return '#00f0ff';                 // Electric cyan
+  }
+
+  /**
+   * Calculate realistic G-forces from vehicle physics data
+   * Lateral G: derived from authentic kinematic centripetal cornering (speed * yawRate) + body acceleration
+   * Longitudinal G: derived from throttle acceleration and braking deceleration
+   */
+  calculateGForces(dt) {
+    if (!this.playerVehicle || !this.playerVehicle.body) return;
+
+    const body = this.playerVehicle.body;
+    const vel = body.velocity;
+    const clampedDt = Math.max(0.001, Math.min(0.05, dt));
+
+    if (!this._prevWorldVel) {
+      this._prevWorldVel = new THREE.Vector3(vel.x, vel.y, vel.z);
+    }
+    if (!this._worldAccel) {
+      this._worldAccel = new THREE.Vector3();
+    }
+
+    // 1. World acceleration vector: a = (v - v_prev) / dt
+    this._worldAccel.set(
+      (vel.x - this._prevWorldVel.x) / clampedDt,
+      (vel.y - this._prevWorldVel.y) / clampedDt,
+      (vel.z - this._prevWorldVel.z) / clampedDt
+    );
+    this._prevWorldVel.set(vel.x, vel.y, vel.z);
+
+    // 2. Vehicle local orientation vectors
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.playerCar.group.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.playerCar.group.quaternion);
+
+    // 3. Longitudinal acceleration (braking: negative forward accel; throttle: positive forward accel)
+    const rawLonAccel = this._worldAccel.dot(forward);
+
+    // 4. Lateral acceleration (true centripetal cornering force felt in turns)
+    // a_c = forwardSpeed * yawRate (yawRate from body.angularVelocity.y)
+    const forwardSpeed = vel.x * forward.x + vel.z * forward.z;
+    const yawRate = (body.angularVelocity && Number.isFinite(body.angularVelocity.y)) ? body.angularVelocity.y : 0;
+    
+    // In Three.js coordinates, turning right corresponds to negative yawRate, giving positive rightward force
+    const centripetalLat = -forwardSpeed * yawRate;
+    const rawLatAccel = this._worldAccel.dot(right) * 0.45 + centripetalLat * 0.55;
+
+    // Convert to G-units (1G = 9.80665 m/s²)
+    // Typical F1 ranges: Lat up to 5.5G, Braking up to -5.0G, Accel up to +2.5G
+    const targetLatG = Math.max(-5.5, Math.min(5.5, rawLatAccel / 9.80665));
+    const targetLonG = Math.max(-5.0, Math.min(2.5, rawLonAccel / 9.80665));
+
+    // Responsive smoothing: fast attack on inputs, smooth fluid decay
+    const attack = 0.22;
+    const decay = 0.12;
+    const latAlpha = Math.abs(targetLatG) > Math.abs(this.smoothedLatG) ? attack : decay;
+    const lonAlpha = Math.abs(targetLonG) > Math.abs(this.smoothedLonG) ? attack : decay;
+
+    this.smoothedLatG += (targetLatG - this.smoothedLatG) * latAlpha;
+    this.smoothedLonG += (targetLonG - this.smoothedLonG) * lonAlpha;
+
+    // Zero threshold when vehicle is stationary
+    if (Math.abs(forwardSpeed) < 0.3) {
+      this.smoothedLatG *= 0.8;
+      this.smoothedLonG *= 0.8;
+    }
+
+    const currentMag = Math.sqrt(this.smoothedLatG * this.smoothedLatG + this.smoothedLonG * this.smoothedLonG);
+
+    // Track peak G
+    if (currentMag > (this.peakG || 0)) {
+      this.peakG = currentMag;
+      if (this.gforcePeakBadge) {
+        this.gforcePeakBadge.textContent = `PEAK ${this.peakG.toFixed(1)}G`;
+      }
+    }
+
+    // Add to history trail
+    this.gforceHistory.push({
+      lat: this.smoothedLatG,
+      lon: this.smoothedLonG,
+      mag: currentMag
+    });
+    if (this.gforceHistory.length > this.maxHistoryLength) {
+      this.gforceHistory.shift();
+    }
+  }
+
+  /**
+   * Render the G-Force Radar visualization
+   * Curvy rounded square frame with central circular "G" hub and dynamic cornering indicators
+   */
+  drawGForceRadar() {
+    if (!this.gfCtx || !this.gforceCanvas) return;
+
+    const ctx = this.gfCtx;
+    const size = 170; // logical canvas size
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const maxRadius = 60; // Max radius for 5.5G
+    const gScale = maxRadius / 5.5; // pixels per G (~10.91 px/G)
+
+    ctx.clearRect(0, 0, size, size);
+
+    // 1. Draw outer background: sleek square with curvy rounded edges
+    const cornerRadius = 16;
+    ctx.save();
+    this.roundRect(ctx, 2, 2, size - 4, size - 4, cornerRadius);
+    const bgGrad = ctx.createRadialGradient(centerX, centerY, 15, centerX, centerY, size * 0.7);
+    bgGrad.addColorStop(0, 'rgba(18, 24, 38, 0.95)');
+    bgGrad.addColorStop(0.7, 'rgba(12, 16, 26, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(6, 8, 14, 1.0)');
+    ctx.fillStyle = bgGrad;
+    ctx.fill();
+
+    // Curvy border stroke
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Concentric G reference rings (1G to 5G)
+    for (let g = 1; g <= 5; g++) {
+      const r = g * gScale;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+      if (g === 5) {
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.35)'; // 5G warning outer ring
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+      } else if (g >= 3) {
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.18)'; // 3G/4G threshold
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 4]);
+      } else {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; // 1G/2G standard
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([2, 3]);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 3. Crosshairs through center
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - maxRadius - 2, centerY);
+    ctx.lineTo(centerX + maxRadius + 2, centerY);
+    ctx.moveTo(centerX, centerY - maxRadius - 2);
+    ctx.lineTo(centerX, centerY + maxRadius + 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 4. Radial G scale labels (along 45-degree angle)
+    ctx.font = '8px "Outfit", sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const diagCos = 0.7071;
+    ctx.fillText('2G', centerX + 2 * gScale * diagCos + 5, centerY - 2 * gScale * diagCos);
+    ctx.fillText('4G', centerX + 4 * gScale * diagCos + 5, centerY - 4 * gScale * diagCos);
+
+    // 5. Directional axis cornering & braking labels
+    ctx.font = 'bold 8px "Outfit", sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+    ctx.textAlign = 'center';
+    ctx.fillText('▲ BRAKE', centerX, centerY - maxRadius - 6);
+    ctx.fillText('▼ ACCEL', centerX, centerY + maxRadius + 10);
+    ctx.textAlign = 'left';
+    ctx.fillText('LAT ►', centerX + maxRadius - 10, centerY - 5);
+    ctx.textAlign = 'right';
+    ctx.fillText('◄ LAT', centerX - maxRadius + 10, centerY - 5);
+
+    // 6. Calculate current force vector & color
+    const curX = Math.max(8, Math.min(size - 8, centerX + this.smoothedLatG * gScale));
+    const curY = Math.max(8, Math.min(size - 8, centerY - this.smoothedLonG * gScale)); // Invert Y (Braking is UP)
+    const gMag = Math.sqrt(this.smoothedLatG * this.smoothedLatG + this.smoothedLonG * this.smoothedLonG);
+    const currentColor = this.getGColor(gMag);
+
+    // 7. Dynamic History Trail (Fading comet tail through corners)
+    for (let i = 0; i < this.gforceHistory.length; i++) {
+      const h = this.gforceHistory[i];
+      const progress = (i + 1) / this.gforceHistory.length;
+      const alpha = progress * 0.45;
+      const hX = centerX + h.lat * gScale;
+      const hY = centerY - h.lon * gScale;
+      const r = 2.0 + progress * 3.2;
+      const trailColor = this.getGColor(h.mag || 0);
+
+      ctx.save();
+      ctx.fillStyle = trailColor;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(hX, hY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 8. Dynamic Vector Tether (connecting center "G" circle to moving puck)
+    const gCircleRadius = 16;
+    if (gMag > 0.15) {
+      ctx.save();
+      const angle = Math.atan2(curY - centerY, curX - centerX);
+      const startX = centerX + Math.cos(angle) * gCircleRadius;
+      const startY = centerY + Math.sin(angle) * gCircleRadius;
+
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = Math.min(3.0, 1.2 + gMag * 0.35);
+      ctx.globalAlpha = Math.min(0.8, 0.25 + gMag * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(curX, curY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 9. THE CENTER "G" IN A CIRCLE (User's specific core visual requirement)
+    ctx.save();
+    // Glowing pulse under high cornering Gs
+    const pulseIntensity = Math.min(18, 5 + gMag * 2.8);
+    ctx.shadowColor = currentColor;
+    ctx.shadowBlur = pulseIntensity;
+
+    // Metallic circular disc
+    const gGrad = ctx.createLinearGradient(centerX - gCircleRadius, centerY - gCircleRadius, centerX + gCircleRadius, centerY + gCircleRadius);
+    gGrad.addColorStop(0, '#242c3d');
+    gGrad.addColorStop(0.5, '#151b27');
+    gGrad.addColorStop(1, '#0c1019');
+    ctx.fillStyle = gGrad;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, gCircleRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // High-tech illuminated ring border
+    ctx.strokeStyle = currentColor;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, gCircleRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner subtle chamfer ring
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, gCircleRadius - 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Bold Modern "G" in the center
+    ctx.font = '900 15px "Outfit", "Titillium Web", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 4;
+    ctx.fillText('G', centerX, centerY + 1);
+    ctx.restore();
+
+    // 10. The Moving G-Force Indicator Puck (Driver Force Ball)
+    ctx.save();
+    // Outer glow aura
+    ctx.shadowColor = currentColor;
+    ctx.shadowBlur = 12 + (gMag > 3.8 ? Math.sin(Date.now() * 0.015) * 6 : 0);
+    ctx.fillStyle = currentColor;
+    ctx.beginPath();
+    ctx.arc(curX, curY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright inner core
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(curX, curY, 3.0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 11. Live Digital Readouts on Radar
+    // Main Live G Magnitude
+    ctx.save();
+    ctx.font = 'bold 12px "Chakra Petch", monospace';
+    ctx.fillStyle = currentColor;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = currentColor;
+    ctx.shadowBlur = 8;
+    ctx.fillText(`${gMag.toFixed(1)} G`, centerX, size - 8);
+
+    // Component Breakdown in small font at corners
+    ctx.font = '8px "Outfit", sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.shadowBlur = 0;
+    const latDir = this.smoothedLatG >= 0 ? 'R' : 'L';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${latDir} ${Math.abs(this.smoothedLatG).toFixed(1)}G`, 8, size - 8);
+
+    ctx.textAlign = 'right';
+    const lonLabel = this.smoothedLonG < 0 ? `BRK ${Math.abs(this.smoothedLonG).toFixed(1)}G` : `ACC ${this.smoothedLonG.toFixed(1)}G`;
+    ctx.fillText(lonLabel, size - 8, size - 8);
+    ctx.restore();
+  }
+
+  roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
   resetInputs() {
     this.keys = {};
     this.touchThrottle = 0;
@@ -546,62 +910,80 @@ class F1Game {
     // Create virtual analog steering slider on left
     const steerZone = document.getElementById('touch-left');
     const rightZone = document.getElementById('touch-right');
-    
+
     if (steerZone && rightZone) {
-      // Replace buttons with analog zones
-      steerZone.outerHTML = `
-        <div id="virtual-steer" class="virtual-analog-zone" style="
-          position: fixed;
-          left: 20px;
-          bottom: 20px;
-          width: 120px;
-          height: 120px;
-          background: rgba(13,17,26,0.7);
-          border: 2px solid rgba(0,240,255,0.3);
-          border-radius: 60px;
-          touch-action: none;
-          z-index: 999;
-        "></div>
+      // Create new elements programmatically to avoid destroying event listeners
+      const virtualSteer = document.createElement('div');
+      virtualSteer.id = 'virtual-steer';
+      virtualSteer.className = 'virtual-analog-zone';
+      virtualSteer.style.cssText = `
+        position: fixed;
+        left: 20px;
+        bottom: 20px;
+        width: 120px;
+        height: 120px;
+        background: rgba(13,17,26,0.7);
+        border: 2px solid rgba(0,240,255,0.3);
+        border-radius: 60px;
+        touch-action: none;
+        z-index: 999;
       `;
-      
-      rightZone.outerHTML = `
-        <div id="virtual-pedals" class="virtual-analog-zone" style="
-          position: fixed;
-          right: 20px;
-          bottom: 20px;
-          width: 140px;
-          height: 180px;
-          background: rgba(13,17,26,0.7);
-          border: 2px solid rgba(255,255,255,0.1);
-          border-radius: 20px;
-          touch-action: none;
-          z-index: 999;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-around;
-          padding: 15px;
-          align-items: center;
-        ">
-          <div id="virtual-brake" class="virtual-pedal" style="
-            width: 70px; height: 70px;
-            background: rgba(255,59,48,0.3);
-            border: 2px solid rgba(255,59,48,0.5);
-            border-radius: 35px;
-            display: flex; align-items: center; justify-content: center;
-            color: #ff3b30; font-weight: 900; font-size: 11px;
-            touch-action: none;
-          ">BRAKE</div>
-          <div id="virtual-throttle" class="virtual-pedal" style="
-            width: 80px; height: 80px;
-            background: rgba(0,210,190,0.3);
-            border: 2px solid rgba(0,210,190,0.5);
-            border-radius: 40px;
-            display: flex; align-items: center; justify-content: center;
-            color: #00d2be; font-weight: 900; font-size: 11px;
-            touch-action: none;
-          ">GAS</div>
-        </div>
+
+      const virtualPedals = document.createElement('div');
+      virtualPedals.id = 'virtual-pedals';
+      virtualPedals.className = 'virtual-analog-zone';
+      virtualPedals.style.cssText = `
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 140px;
+        height: 180px;
+        background: rgba(13,17,26,0.7);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        touch-action: none;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        padding: 15px;
+        align-items: center;
       `;
+
+      const virtualBrake = document.createElement('div');
+      virtualBrake.id = 'virtual-brake';
+      virtualBrake.className = 'virtual-pedal';
+      virtualBrake.style.cssText = `
+        width: 70px; height: 70px;
+        background: rgba(255,59,48,0.3);
+        border: 2px solid rgba(255,59,48,0.5);
+        border-radius: 35px;
+        display: flex; align-items: center; justify-content: center;
+        color: #ff3b30; font-weight: 900; font-size: 11px;
+        touch-action: none;
+      `;
+      virtualBrake.textContent = 'BRAKE';
+
+      const virtualThrottle = document.createElement('div');
+      virtualThrottle.id = 'virtual-throttle';
+      virtualThrottle.className = 'virtual-pedal';
+      virtualThrottle.style.cssText = `
+        width: 80px; height: 80px;
+        background: rgba(0,210,190,0.3);
+        border: 2px solid rgba(0,210,190,0.5);
+        border-radius: 40px;
+        display: flex; align-items: center; justify-content: center;
+        color: #00d2be; font-weight: 900; font-size: 11px;
+        touch-action: none;
+      `;
+      virtualThrottle.textContent = 'GAS';
+
+      virtualPedals.appendChild(virtualBrake);
+      virtualPedals.appendChild(virtualThrottle);
+
+      // Use replaceWith to preserve any existing listeners on parent elements
+      steerZone.replaceWith(virtualSteer);
+      rightZone.replaceWith(virtualPedals);
 
       this.setupVirtualAnalogSteering();
       this.setupVirtualPedals();
@@ -840,7 +1222,13 @@ class F1Game {
     const isBraking = !!(this.keys['KeyS'] || this.keys['ArrowDown'] || this.keys['s'] || this.touchBrake > 0 || gamepadBrake > 0);
     if (isBraking) {
       // Anti-reverse protection near Start/Finish line & starting lights
-      if (this.track && this.playerVehicle) {
+      // DISABLED during race start countdown and initial launch - allow movement from grid
+      const isRaceStartLocked = this.session.currentMode === SESSION_TYPES.RACE &&
+        (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START' || this.session.raceState === 'RACING');
+      const raceJustStarted = isRaceStartLocked && this.session.raceState === 'RACING' && this.session.raceStartTime &&
+        (performance.now() - this.session.raceStartTime) < 3000; // 3s grace period after lights out
+
+      if (!raceJustStarted && this.track && this.playerVehicle) {
         const pY = this.playerVehicle.body.position.y;
         const hintT = (this.timing && Number.isFinite(this.timing.prevProgress)) ? this.timing.prevProgress : null;
         const trackInfo = this.track.getClosestTrackPoint(this.playerVehicle.body.position.x, this.playerVehicle.body.position.z, pY, hintT);
@@ -956,6 +1344,7 @@ class F1Game {
 
   restartSession() {
     this.resetInputs();
+    this.raceLaunched = false;
     if (this.session && this.session.currentMode === SESSION_TYPES.PRACTICE) {
       this.setStartLightsVisible(false);
       this.updateGantryBulbs(0);
@@ -1634,7 +2023,7 @@ class F1Game {
     }
   }
 
-  initTrackSelectorUI() {
+initTrackSelectorUI() {
     const container = document.getElementById('track-grid-container');
     if (!container) return;
 
@@ -1642,34 +2031,46 @@ class F1Game {
 
     TRACK_DATABASE.forEach(track => {
       const card = document.createElement('div');
+      const safeTrackId = escapeHtml(track.id);
       card.className = `track-card ${track.id === this.currentTrackId ? 'active' : ''}`;
-      card.setAttribute('data-track', track.id);
+      card.setAttribute('data-track', safeTrackId);
 
       const diffClass = `diff-${track.difficultyRating.toLowerCase()}`;
 
+      // Escape all track data for safe innerHTML interpolation
+      const safeFlag = escapeHtml(track.flag);
+      const safeName = escapeHtml(track.name);
+      const safeCountry = escapeHtml(track.country);
+      const safeCountryCode = escapeHtml(track.countryCode);
+      const safeLengthMeters = escapeHtml(String(track.lengthMeters));
+      const safeDifficulty = escapeHtml(track.difficultyRating.toUpperCase());
+      const safeSkyType = escapeHtml(track.theme.skyType);
+      const safeCharacteristics = escapeHtml(track.characteristics);
+      const activeBadge = track.id === this.currentTrackId ? '<div class="track-card-active-badge">ACTIVE</div>' : '';
+
       card.innerHTML = `
-        ${track.id === this.currentTrackId ? '<div class="track-card-active-badge">ACTIVE</div>' : ''}
+        ${activeBadge}
         <div class="track-card-top">
-          <span class="track-card-flag">${track.flag}</span>
+          <span class="track-card-flag">${safeFlag}</span>
           <div class="track-card-info">
-            <span class="track-card-name">${track.name}</span>
-            <span class="track-card-country">${track.country} • ${track.countryCode}</span>
+            <span class="track-card-name">${safeName}</span>
+            <span class="track-card-country">${safeCountry} &#8226; ${safeCountryCode}</span>
           </div>
         </div>
 
         <div class="track-card-preview-wrap">
-          <canvas class="track-card-canvas" id="track-canvas-${track.id}" width="260" height="120"></canvas>
+          <canvas class="track-card-canvas" id="track-canvas-${safeTrackId}" width="260" height="120"></canvas>
         </div>
 
         <div class="track-card-stats">
-          <span class="track-pill">${track.lengthMeters}M</span>
-          <span class="track-pill ${diffClass}">${track.difficultyRating.toUpperCase()}</span>
-          <span class="track-pill">${track.theme.skyType}</span>
+          <span class="track-pill">${safeLengthMeters}M</span>
+          <span class="track-pill ${diffClass}">${safeDifficulty}</span>
+          <span class="track-pill">${safeSkyType}</span>
         </div>
 
-        <div class="track-card-desc">${track.characteristics}</div>
+        <div class="track-card-desc">${safeCharacteristics}</div>
 
-        <button class="btn-select-circuit" data-track="${track.id}">SELECT &amp; RACE</button>
+        <button class="btn-select-circuit" data-track="${safeTrackId}">SELECT & RACE</button>
       `;
 
       card.addEventListener('click', () => {
@@ -1683,7 +2084,7 @@ class F1Game {
     // Render 2D top-down spline preview on all card canvases
     setTimeout(() => {
       TRACK_DATABASE.forEach(track => {
-        const cvs = document.getElementById(`track-canvas-${track.id}`);
+        const cvs = document.getElementById(`track-canvas-${escapeHtml(track.id)}`);
         if (cvs) this.drawTrackPreview(cvs, track);
       });
     }, 80);
@@ -1764,6 +2165,9 @@ class F1Game {
     this.currentTrackId = trackId;
     this.resetInputs();
 
+    // Clear GLB model cache to prevent memory leak on track switch
+    clearGltfCache();
+
     // 1. Procedural Track Load (cleans up previous meshes & static Cannon-es physics colliders)
     this.track.loadTrack(trackData);
     this.physics.setTrack(this.track);
@@ -1804,6 +2208,7 @@ class F1Game {
 
     // 6. Reset session state to clean defaults before initializing new session
     this.session.resetSessionState();
+    this.raceLaunched = false;
     this.setStartLightsVisible(false);
     this.updateGantryBulbs(0);
 
@@ -1836,7 +2241,7 @@ class F1Game {
     }
   }
 
-  initCarSelectorUI() {
+initCarSelectorUI() {
     const container = document.getElementById('car-grid-container');
     if (!container) return;
 
@@ -1845,38 +2250,51 @@ class F1Game {
     F1_TEAMS.forEach(team => {
       const card = document.createElement('div');
       const isActive = team.id === this.currentTeamId;
+      const safeTeamId = escapeHtml(team.id);
       card.className = `car-card ${isActive ? 'active' : ''}`;
-      card.setAttribute('data-team', team.id);
-      card.style.setProperty('--team-color', team.primaryHex);
+      card.setAttribute('data-team', safeTeamId);
+      card.style.setProperty('--team-color', escapeHtml(team.primaryHex));
+
+      // Escape all team data for safe innerHTML interpolation
+      const safePrimaryHex = escapeHtml(team.primaryHex);
+      const safeDriverNumber = escapeHtml(String(team.driverNumber));
+      const safeName = escapeHtml(team.name);
+      const safeDriverName = escapeHtml(team.driverName);
+      const safeFullName = escapeHtml(team.fullName);
+      const safePowerUnit = escapeHtml(team.powerUnit);
+      const safeTopSpeed = escapeHtml(String(team.stats.topSpeed));
+      const safeAero = escapeHtml(String(team.stats.aero));
+      const safeAcceleration = escapeHtml(String(team.stats.acceleration));
+      const activeBadge = isActive ? '<div class="car-card-active-badge">ACTIVE</div>' : '';
 
       card.innerHTML = `
-        ${isActive ? '<div class="car-card-active-badge">ACTIVE</div>' : ''}
+        ${activeBadge}
         <div class="car-card-header">
-          <div class="car-card-number-pod" style="border-color: ${team.primaryHex};">
-            ${team.driverNumber}
+          <div class="car-card-number-pod" style="border-color: ${safePrimaryHex};">
+            ${safeDriverNumber}
           </div>
           <div class="car-card-title-group">
-            <span class="car-card-name">${team.name}</span>
-            <span class="car-card-driver">${team.driverName} • ${team.fullName}</span>
+            <span class="car-card-name">${safeName}</span>
+            <span class="car-card-driver">${safeDriverName} &#8226; ${safeFullName}</span>
           </div>
         </div>
 
         <div class="car-card-preview-wrap">
-          <canvas class="car-card-canvas" id="car-canvas-${team.id}" width="280" height="60"></canvas>
+          <canvas class="car-card-canvas" id="car-canvas-${safeTeamId}" width="280" height="60"></canvas>
         </div>
 
         <div class="car-card-pu">
           <span class="car-card-pu-label">POWER UNIT:</span>
-          <span>${team.powerUnit}</span>
+          <span>${safePowerUnit}</span>
         </div>
 
         <div class="car-card-stats">
-          <span class="car-stat-pill">TOP: ${team.stats.topSpeed}</span>
-          <span class="car-stat-pill">AERO: ${team.stats.aero}</span>
-          <span class="car-stat-pill">ACCEL: ${team.stats.acceleration}</span>
+          <span class="car-stat-pill">TOP: ${safeTopSpeed}</span>
+          <span class="car-stat-pill">AERO: ${safeAero}</span>
+          <span class="car-stat-pill">ACCEL: ${safeAcceleration}</span>
         </div>
 
-        <button class="btn-select-car" data-team="${team.id}">SELECT &amp; DRIVE</button>
+        <button class="btn-select-car" data-team="${safeTeamId}">SELECT & DRIVE</button>
       `;
 
       card.addEventListener('click', () => {
@@ -1890,7 +2308,7 @@ class F1Game {
     // Render 2D top-down livery swatch on card canvases
     setTimeout(() => {
       F1_TEAMS.forEach(team => {
-        const cvs = document.getElementById(`car-canvas-${team.id}`);
+        const cvs = document.getElementById(`car-canvas-${escapeHtml(team.id)}`);
         if (cvs) this.drawCarLiveryPreview(cvs, team);
       });
     }, 80);
@@ -1958,6 +2376,9 @@ class F1Game {
     try {
       localStorage.setItem('f1_player_team', team.id);
     } catch (e) {}
+
+    // Clear GLB model cache to prevent memory leak on car switch
+    clearGltfCache();
 
     // 1. Harmonize AI Grid and update player 3D car livery
     if (this.aiGrid) {
@@ -2285,17 +2706,24 @@ class F1Game {
       const card = document.createElement('div');
       const isActive = lang.code === currentLang;
       const isAuto = lang.code === autoLang;
+      const safeLangCode = escapeHtml(lang.code);
       card.className = `lang-card ${isActive ? 'active' : ''}`;
-      card.setAttribute('data-lang', lang.code);
+      card.setAttribute('data-lang', safeLangCode);
 
-      const activeTag = isActive ? `<span class="lang-active-tag">${this.i18n.t('lang_active', {}, 'ACTIVE')}</span>` : '';
-      const autoTag = isAuto ? `<span class="lang-auto-tag">${this.i18n.t('lang_auto_badge', {}, 'AUTO')}</span>` : '';
+      // Use i18n translations which are already safe, but escape lang data
+      const activeTag = isActive ? `<span class="lang-active-tag">${escapeHtml(this.i18n.t('lang_active', {}, 'ACTIVE'))}</span>` : '';
+      const autoTag = isAuto ? `<span class="lang-auto-tag">${escapeHtml(this.i18n.t('lang_auto_badge', {}, 'AUTO'))}</span>` : '';
+
+      // Escape all language data for safe innerHTML interpolation
+      const safeFlag = escapeHtml(lang.flag);
+      const safeName = escapeHtml(lang.name);
+      const safeRegion = escapeHtml(lang.region);
 
       card.innerHTML = `
-        <div class="lang-card-flag">${lang.flag}</div>
+        <div class="lang-card-flag">${safeFlag}</div>
         <div class="lang-card-info">
-          <div class="lang-card-name">${lang.name}</div>
-          <div class="lang-card-region">${lang.region}</div>
+          <div class="lang-card-name">${safeName}</div>
+          <div class="lang-card-region">${safeRegion}</div>
         </div>
         <div class="lang-badge-container">
           ${activeTag}
@@ -2306,7 +2734,7 @@ class F1Game {
       card.addEventListener('click', () => {
         this.i18n.setLanguage(lang.code);
         this.closeModals();
-        this.showCenterAlert(`${lang.flag} ${lang.name.toUpperCase()}`, 1600);
+        this.showCenterAlert(`${safeFlag} ${escapeHtml(lang.name.toUpperCase())}`, 1600);
       });
 
       container.appendChild(card);
@@ -2426,15 +2854,27 @@ class F1Game {
       }
 
       this.drawMinimap();
-      this.renderer.render(this.scene, this.camera);
-      return;
+    this.drawGForceRadar();
+    this.renderer.render(this.scene, this.camera);
+    return;
     }
 
     // ======================================================================
     // SINGLE PLAYER & HOST AUTHORITATIVE SIMULATION
     // ======================================================================
     // During countdown, keep player car firmly locked on starting grid position
-    if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
+    const isCountdown = this.session.currentMode === SESSION_TYPES.RACE &&
+      (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START');
+
+    // Track race launch state to prevent grid lock from re-engaging
+    if (this.session.currentMode === SESSION_TYPES.RACE && this.session.raceState === 'RACING') {
+      this.raceLaunched = true;
+    }
+
+    // Only apply grid lock during countdown AND before race has launched
+    const shouldGridLock = isCountdown && !this.raceLaunched;
+
+    if (shouldGridLock) {
       this.playerVehicle.body.velocity.set(0, 0, 0);
       this.playerVehicle.body.angularVelocity.set(0, 0, 0);
       if (this.aiGrid && this.aiGrid.playerSpawnGridPos) {
@@ -2445,7 +2885,7 @@ class F1Game {
     this.physics.updateVehicle(this.playerVehicle, this.controls, dt, this.audio);
     this.physics.step(dt);
 
-    if (this.session.currentMode === SESSION_TYPES.RACE && (this.session.raceState === 'LIGHTS_COUNTDOWN' || this.session.raceState === 'PRE_START')) {
+    if (shouldGridLock) {
       this.playerVehicle.body.velocity.set(0, 0, 0);
       this.playerVehicle.body.angularVelocity.set(0, 0, 0);
       if (this.aiGrid && this.aiGrid.playerSpawnGridPos) {
@@ -2555,6 +2995,9 @@ class F1Game {
       isBottomingOut
     );
 
+    // Calculate G-forces from physics
+    this.calculateGForces(dt);
+
     // Update Session state machine & 10-car AI grid dynamics
     this.session.update(dt, this.playerVehicle, pPos, vel);
     this.timing.update(pPos, vel);
@@ -2592,6 +3035,7 @@ class F1Game {
     );
 
     this.drawMinimap();
+    this.drawGForceRadar();
 
     // Broadcast 30Hz snapshot from Host to Guest
     if (this.isMultiplayer && this.isHost && this.network && this.network.isConnected) {

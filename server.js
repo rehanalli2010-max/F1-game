@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const zlib = require('zlib');
 
 const PORT = 3000;
 const MIME_TYPES = {
@@ -24,8 +25,27 @@ const MIME_TYPES = {
   '.wav': 'audio/wav'
 };
 
+// Compressible MIME types
+const COMPRESSIBLE_TYPES = new Set([
+  'text/html',
+  'text/css',
+  'application/javascript',
+  'application/json',
+  'image/svg+xml',
+  'model/gltf+json'
+]);
+
 // In-memory buffer cache for vendor scripts and 3D models (superfast response)
 const _memoryCache = new Map();
+
+// Preload critical immutable vendor assets into memory at startup
+const PRELOAD_ASSETS = [
+  '/js/vendor/three.module.min.js',
+  '/js/vendor/cannon-es.js',
+  '/js/vendor/peerjs.min.js',
+  '/assets/models/ferrari.glb',
+  '/assets/models/redbull.glb'
+];
 
 const ROOT_DIR = path.resolve(__dirname);
 
@@ -38,6 +58,32 @@ function setSecurityHeaders(res, extraHeaders = {}) {
     ...extraHeaders
   };
   return headers;
+}
+
+function shouldCompress(req, contentType) {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  return COMPRESSIBLE_TYPES.has(contentType) && acceptEncoding.includes('gzip');
+}
+
+function compressContent(content, encoding) {
+  if (encoding === 'gzip') {
+    return zlib.gzipSync(content);
+  }
+  return content;
+}
+
+// Preload critical assets at startup
+function preloadAssets() {
+  console.log('Preloading critical assets into memory...');
+  for (const asset of PRELOAD_ASSETS) {
+    const filePath = path.resolve(ROOT_DIR, '.' + path.sep + path.normalize(asset));
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath);
+      _memoryCache.set(filePath, content);
+      console.log(`  Preloaded: ${asset} (${(content.length / 1024).toFixed(1)} KB)`);
+    }
+  }
+  console.log(`Preload complete. ${_memoryCache.size} assets in memory cache.`);
 }
 
 const server = http.createServer((req, res) => {
@@ -77,18 +123,28 @@ const server = http.createServer((req, res) => {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  const isImmutable = cleanUrl.startsWith('/js/vendor/') || ext === '.woff2';
+  const isImmutable = cleanUrl.startsWith('/js/vendor/') || ext === '.woff2' || ext === '.glb';
   const cacheControl = isImmutable
     ? 'public, max-age=86400, immutable'
     : 'no-cache, must-revalidate';
 
+  // Check memory cache first
   if (_memoryCache.has(filePath)) {
     const cached = _memoryCache.get(filePath);
-    res.writeHead(200, setSecurityHeaders(res, {
+    const headers = setSecurityHeaders(res, {
       'Content-Type': contentType,
       'Cache-Control': cacheControl
-    }));
-    res.end(cached);
+    });
+
+    if (shouldCompress(req, contentType)) {
+      headers['Content-Encoding'] = 'gzip';
+      headers['Vary'] = 'Accept-Encoding';
+      res.writeHead(200, headers);
+      res.end(zlib.gzipSync(cached));
+    } else {
+      res.writeHead(200, headers);
+      res.end(cached);
+    }
     return;
   }
 
@@ -102,14 +158,25 @@ const server = http.createServer((req, res) => {
         res.end('Server Error: ' + err.code);
       }
     } else {
+      // Cache immutable assets
       if (isImmutable) {
         _memoryCache.set(filePath, content);
       }
-      res.writeHead(200, setSecurityHeaders(res, {
+
+      const headers = setSecurityHeaders(res, {
         'Content-Type': contentType,
         'Cache-Control': cacheControl
-      }));
-      res.end(content);
+      });
+
+      if (shouldCompress(req, contentType)) {
+        headers['Content-Encoding'] = 'gzip';
+        headers['Vary'] = 'Accept-Encoding';
+        res.writeHead(200, headers);
+        res.end(zlib.gzipSync(content));
+      } else {
+        res.writeHead(200, headers);
+        res.end(content);
+      }
     }
   });
 });
@@ -129,6 +196,7 @@ server.on('error', (err) => {
 });
 
 console.log('Starting F1 Game Server...');
+preloadAssets();
 server.listen(PORT, () => {
   console.log(`F1 Game Server running at http://localhost:${PORT}/`);
   if (process.argv.includes('--open')) {
