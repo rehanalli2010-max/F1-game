@@ -27,9 +27,53 @@ const MIME_TYPES = {
 // In-memory buffer cache for vendor scripts and 3D models (superfast response)
 const _memoryCache = new Map();
 
+const ROOT_DIR = path.resolve(__dirname);
+
+function setSecurityHeaders(res, extraHeaders = {}) {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    ...extraHeaders
+  };
+  return headers;
+}
+
 const server = http.createServer((req, res) => {
-  const cleanUrl = req.url.split('?')[0];
-  let filePath = path.join(__dirname, (cleanUrl === '/' || cleanUrl === '') ? 'index.html' : cleanUrl);
+  let cleanUrl = req.url.split('?')[0];
+  try {
+    cleanUrl = decodeURIComponent(cleanUrl);
+  } catch (e) {
+    res.writeHead(400, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
+    res.end('400 Bad Request');
+    return;
+  }
+
+  // Reject any explicit directory traversal attempts
+  if (cleanUrl.includes('..')) {
+    res.writeHead(403, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
+    res.end('403 Forbidden: Traversal Denied');
+    return;
+  }
+
+  const relativePath = (cleanUrl === '/' || cleanUrl === '') ? 'index.html' : cleanUrl;
+  const filePath = path.resolve(ROOT_DIR, '.' + path.sep + path.normalize(relativePath));
+
+  // Verify the target path stays strictly inside root directory
+  if (!filePath.startsWith(ROOT_DIR)) {
+    res.writeHead(403, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
+    res.end('403 Forbidden: Out of Bounds');
+    return;
+  }
+
+  // Deny access to hidden dotfiles (.git, .env, etc.)
+  if (path.basename(filePath).startsWith('.') && path.basename(filePath) !== '.') {
+    res.writeHead(403, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
+    res.end('403 Forbidden');
+    return;
+  }
+
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
@@ -40,33 +84,31 @@ const server = http.createServer((req, res) => {
 
   if (_memoryCache.has(filePath)) {
     const cached = _memoryCache.get(filePath);
-    res.writeHead(200, {
+    res.writeHead(200, setSecurityHeaders(res, {
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
       'Cache-Control': cacheControl
-    });
+    }));
     res.end(cached);
     return;
   }
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      if (err.code === 'ENOENT') {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
+      if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+        res.writeHead(404, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
         res.end('404 Not Found');
       } else {
-        res.writeHead(500);
+        res.writeHead(500, setSecurityHeaders(res, { 'Content-Type': 'text/plain' }));
         res.end('Server Error: ' + err.code);
       }
     } else {
       if (isImmutable) {
         _memoryCache.set(filePath, content);
       }
-      res.writeHead(200, {
+      res.writeHead(200, setSecurityHeaders(res, {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': cacheControl
-      });
+      }));
       res.end(content);
     }
   });

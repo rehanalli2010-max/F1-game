@@ -2,16 +2,30 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=41';
 import { F1Car } from './car.js?v=33';
-import { PhysicsWorld } from './physics.js?v=62';
-import { Track } from './circuit.js?v=321';
-import { TimingSystem } from './timing.js?v=351';
+import { PhysicsWorld } from './physics.js?v=63';
+import { Track } from './circuit.js?v=331';
+import { TimingSystem } from './timing.js?v=352';
 import { SessionManager, SESSION_TYPES } from './session.js?v=351';
-import { AIGridManager } from './ai.js?v=451';
-import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=301';
+import { AIGridManager, DIFFICULTY_MODES } from './ai.js?v=456';
+import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=302';
 import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=401';
 import { F1_TEAMS, getTeamById } from './teams_db.js?v=101';
 import { EffectsManager } from './fx.js?v=51';
 import { i18n, SUPPORTED_LANGUAGES } from './i18n.js';
+
+/**
+ * HTML Sanitization helper against XSS in dynamic DOM string interpolations
+ */
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str ?? '');
+  return str.replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
 
 /**
  * Main Application Orchestrator for Phase 4 3D F1 Racing Game with P2P Multiplayer
@@ -827,7 +841,9 @@ class F1Game {
     if (isBraking) {
       // Anti-reverse protection near Start/Finish line & starting lights
       if (this.track && this.playerVehicle) {
-        const trackInfo = this.track.getClosestTrackPoint(this.playerVehicle.body.position.x, this.playerVehicle.body.position.z);
+        const pY = this.playerVehicle.body.position.y;
+        const hintT = (this.timing && Number.isFinite(this.timing.prevProgress)) ? this.timing.prevProgress : null;
+        const trackInfo = this.track.getClosestTrackPoint(this.playerVehicle.body.position.x, this.playerVehicle.body.position.z, pY, hintT);
         if ((trackInfo.t < 0.035 || trackInfo.t > 0.965) && this.playerVehicle.body.velocity.length() < 0.8) {
           this.controls.brake = 1.0;
           this.playerVehicle.isReversing = false;
@@ -940,6 +956,10 @@ class F1Game {
 
   restartSession() {
     this.resetInputs();
+    if (this.session && this.session.currentMode === SESSION_TYPES.PRACTICE) {
+      this.setStartLightsVisible(false);
+      this.updateGantryBulbs(0);
+    }
     this.session.initSession(this.session.currentMode, this.playerVehicle, this.playerCar);
     this.resetInputs();
     this.resetCamera();
@@ -1258,14 +1278,18 @@ class F1Game {
           for (let i = 0; i < leaderboard.length; i++) {
             const entry = leaderboard[i];
             const gapStr = entry.gapSeconds === 'LEADER' ? 'LEADER' : `+${entry.gapSeconds}s`;
+            const safePos = Number(entry.pos) || (i + 1);
+            const safeColor = escapeHtml(String(entry.color || '#fff'));
+            const safeCode = escapeHtml(String(entry.code || 'DRV'));
+            const safeGap = escapeHtml(gapStr);
             rowsHtml += `
               <div class="tower-row ${entry.isPlayer ? 'player-row' : ''}">
-                <span class="tower-pos">P${entry.pos}</span>
+                <span class="tower-pos">P${safePos}</span>
                 <div class="tower-driver-cell">
-                  <span class="tower-team-bar" style="background:${entry.color};"></span>
-                  <span class="tower-code">${entry.code}</span>
+                  <span class="tower-team-bar" style="background:${safeColor};"></span>
+                  <span class="tower-code">${safeCode}</span>
                 </div>
-                <span class="tower-gap">${gapStr}</span>
+                <span class="tower-gap">${safeGap}</span>
               </div>
             `;
           }
@@ -1439,11 +1463,14 @@ class F1Game {
 
   onSessionChanged(mode) {
     this.clearCenterAlert();
+    this.closeModals();
     // Highlight active session button
     document.querySelectorAll('.session-btn').forEach(b => b.classList.remove('active'));
     if (mode === SESSION_TYPES.PRACTICE) {
       const btn = document.getElementById('btn-mode-practice');
       if (btn) btn.classList.add('active');
+      this.setStartLightsVisible(false);
+      this.updateGantryBulbs(0);
     } else if (mode === SESSION_TYPES.RACE) {
       const btn = document.getElementById('btn-mode-race');
       if (btn) btn.classList.add('active');
@@ -1453,8 +1480,12 @@ class F1Game {
   setStartLightsVisible(visible) {
     const gantry = document.getElementById('start-lights-gantry');
     if (gantry) {
-      if (visible) gantry.classList.remove('hidden');
-      else gantry.classList.add('hidden');
+      if (visible) {
+        gantry.classList.remove('hidden');
+      } else {
+        gantry.classList.add('hidden');
+        this.updateGantryBulbs(0);
+      }
     }
   }
 
@@ -1524,11 +1555,15 @@ class F1Game {
             gapStr = `+${entry.gapSeconds}s`;
           }
         }
+        const safePos = Number(entry.pos) || 1;
+        const safeName = escapeHtml(String(entry.name || 'Driver'));
+        const safeTeam = escapeHtml(String(entry.team || 'Team'));
+        const safeGap = escapeHtml(gapStr);
         tr.innerHTML = `
-          <td><strong>P${entry.pos}</strong></td>
-          <td>${entry.name}</td>
-          <td>${entry.team}</td>
-          <td>${gapStr}</td>
+          <td><strong>P${safePos}</strong></td>
+          <td>${safeName}</td>
+          <td>${safeTeam}</td>
+          <td>${safeGap}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -1769,6 +1804,8 @@ class F1Game {
 
     // 6. Reset session state to clean defaults before initializing new session
     this.session.resetSessionState();
+    this.setStartLightsVisible(false);
+    this.updateGantryBulbs(0);
 
     // 7. Reset session cleanly to Practice mode on the new starting grid
     this.session.initSession(SESSION_TYPES.PRACTICE, this.playerVehicle, this.playerCar);
@@ -1964,6 +2001,10 @@ class F1Game {
     });
 
     this.showCenterAlert(`CAR SELECTED: ${team.fullName.toUpperCase()} (#${team.driverNumber})`, 2500, 'alert-flying-lap');
+  }
+
+  selectTeam(teamId) {
+    return this.switchCar(teamId);
   }
 
   updateCarHeaderButton(team) {
@@ -2421,7 +2462,44 @@ class F1Game {
       : this.playerVehicle.body.quaternion;
 
     if (this.track && typeof this.track.getClosestTrackPoint === 'function') {
-      const curTrackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z);
+      const pY = (pPos && Number.isFinite(pPos.y)) ? pPos.y : null;
+      const hintT = (this.timing && Number.isFinite(this.timing.prevProgress)) ? this.timing.prevProgress : null;
+      const curTrackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z, pY, hintT);
+      if (curTrackInfo && curTrackInfo.point && Number.isFinite(curTrackInfo.point.y)) {
+        const halfW = (this.track.trackWidth || 16.0) / 2;
+        const curbWidth = 1.4;
+        const apronWidth = 3.5;
+        const roadPavedLimit = halfW + apronWidth; // 11.5m: full paved road, curbs, and apron
+        
+        let targetCarY;
+        if (curTrackInfo.distance <= halfW) {
+          // On main asphalt surface
+          targetCarY = curTrackInfo.point.y + 0.04;
+        } else if (curTrackInfo.distance <= halfW + curbWidth) {
+          // On curbs (gentle realistic curb rise of +2cm)
+          targetCarY = curTrackInfo.point.y + 0.06;
+        } else if (curTrackInfo.distance <= roadPavedLimit) {
+          // On paved apron
+          targetCarY = curTrackInfo.point.y + 0.04;
+        } else {
+          // Off-track run-off: smooth transition from apron edge to terrain
+          const offDist = curTrackInfo.distance - roadPavedLimit;
+          const blendSpan = 3.5;
+          const blend = Math.min(1.0, offDist / blendSpan);
+          const smooth = blend * blend * (3.0 - 2.0 * blend);
+          const groundY = (typeof this.track.getTerrainHeight === 'function')
+            ? this.track.getTerrainHeight(pPos.x, pPos.z) + 0.04
+            : curTrackInfo.point.y + 0.04;
+          // Guard against underground valley terrain: never drop lower than road - 0.75m
+          const safeOffTrackGroundY = Math.max(curTrackInfo.point.y - 0.75, groundY);
+          targetCarY = (1.0 - smooth) * (curTrackInfo.point.y + 0.04) + smooth * safeOffTrackGroundY;
+        }
+        pPos.y = targetCarY;
+        this.playerVehicle.body.position.y = targetCarY;
+        if (this.playerVehicle.body.interpolatedPosition) {
+          this.playerVehicle.body.interpolatedPosition.y = targetCarY;
+        }
+      }
       if (curTrackInfo && curTrackInfo.tangent && Number.isFinite(curTrackInfo.tangent.y)) {
         const targetPitchAngle = -Math.asin(Math.max(-0.45, Math.min(0.45, curTrackInfo.tangent.y)));
         if (!Number.isFinite(this._smoothPitchAngle)) this._smoothPitchAngle = targetPitchAngle;
@@ -2460,7 +2538,9 @@ class F1Game {
     }
 
     // Repair damage when crossing start/finish line (pit stop simulation)
-    const trackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z);
+    const curY = (pPos && Number.isFinite(pPos.y)) ? pPos.y : null;
+    const curHintT = (this.timing && Number.isFinite(this.timing.prevProgress)) ? this.timing.prevProgress : null;
+    const trackInfo = this.track.getClosestTrackPoint(pPos.x, pPos.z, curY, curHintT);
     if (trackInfo.t < 0.02 && this.playerCar.damage.frontWingDamage > 0) {
       this.playerCar.repairDamage();
     }

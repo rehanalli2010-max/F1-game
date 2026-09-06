@@ -91,8 +91,22 @@ export class Track {
     // Sample track points & tangents
     this.sampleTrackData();
 
+    // Cache track elevation range for procedural terrain contouring
+    let minElev = 0;
+    let maxElev = 0;
+    for (let i = 0; i < this.sampledPoints.length; i++) {
+      const y = this.sampledPoints[i].y || 0;
+      if (y < minElev) minElev = y;
+      if (y > maxElev) maxElev = y;
+    }
+    this._minTrackElevation = minElev;
+    this._maxTrackElevation = maxElev;
+
     // Generate 8 evenly spaced checkpoints for lap validation & anti-cut detection
     this.generateCheckpoints();
+
+    // Initialize grandstand specifications & terraced pads before building terrain environment
+    this.initGrandstandPads();
 
     // Build Environment & Thematic Palettes
     this.buildEnvironment();
@@ -103,6 +117,11 @@ export class Track {
 
     // Build Barriers & Cannon-es Colliders
     this.buildTrackBarriers();
+
+    // Dedicated Crossover Bridge Architecture (Suzuka Figure-8 Overpass)
+    if (this.trackData.id === 'suzuka') {
+      this.buildSuzukaCrossoverBridge();
+    }
 
     // Build Pit Complex, Starting Gantry, 10 Grid Boxes
     this.buildPitComplex();
@@ -142,6 +161,237 @@ export class Track {
     }
   }
 
+  /**
+   * Initializes bespoke grandstand specifications and geometric spectator pads
+   * so terrain contouring can flatten and terrace viewing plateaus into hillsides.
+   */
+  initGrandstandPads() {
+    this.grandstandPads = [];
+    let grandstandSpecs = [];
+
+    if (this.trackData.id === 'monza') {
+      grandstandSpecs = [
+        { t: 0.008, side: -1, dist: this.barrierDistance + 13.0, length: 90, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        { t: 0.045, side: -1, dist: this.barrierDistance + 13.0, length: 90, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        { t: 0.125, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 11.0, rows: 11, sponsor: 'ROLEX', roofColor: 0x00594f },
+        { t: 0.72, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 13, height: 10.0, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 },
+        { t: 0.92, side: -1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'HEINEKEN', roofColor: 0x008234 },
+        { t: 0.965, side: -1, dist: this.barrierDistance + 14.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
+      ];
+    } else if (this.trackData.id === 'monaco') {
+      grandstandSpecs = [
+        // 1. Grandstand A - Sainte-Dévote (Overlooking Turn 1 braking zone from Pit Straight)
+        { t: 0.10, side: -1, dist: this.barrierDistance + 4.5, length: 48, depth: 8, height: 7.5, rows: 6, sponsor: 'ROLEX', roofColor: 0x00594f },
+        // 2. Grandstand B - Casino Square Plaza (Overlooking Hotel de Paris & Casino Square terrace at summit)
+        { t: 0.44, side: 1, dist: this.barrierDistance + 7.0, length: 32, depth: 8, height: 7.0, rows: 6, sponsor: 'MONTE CARLO', roofColor: 0x1e3a8a },
+        // 3. Grandstand K - Port Hercule Harbor Quay (Along the famous waterfront quay overlooking superyachts)
+        { t: 0.82, side: -1, dist: this.barrierDistance + 5.0, length: 56, depth: 8, height: 7.5, rows: 6, sponsor: 'TAG HEUER', roofColor: 0xe10600 },
+        // 4. Grandstand L - Rainier III Swimming Pool / Piscine (Overlooking harbor chicane)
+        { t: 0.90, side: -1, dist: this.barrierDistance + 4.5, length: 50, depth: 8, height: 7.5, rows: 6, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        // 5. Grandstand T - Pit Straight / La Rascasse (Opposite pit lane and start straight entry)
+        { t: 0.98, side: -1, dist: this.barrierDistance + 4.5, length: 46, depth: 8, height: 7.0, rows: 6, sponsor: 'FORMULA 1', roofColor: 0xe10600 }
+      ];
+    } else if (this.trackData.id === 'silverstone') {
+      grandstandSpecs = [
+        { t: 0.975, side: -1, dist: this.barrierDistance + 14.0, length: 90, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        { t: 0.05, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        { t: 0.25, side: 1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
+        { t: 0.38, side: -1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'BRITISH GP', roofColor: 0x1e3a8a },
+        { t: 0.505, side: -1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'ARAMCO', roofColor: 0x008080 },
+        { t: 0.61, side: 1, dist: this.barrierDistance + 16.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 },
+        { t: 0.825, side: 1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
+      ];
+    } else if (this.trackData.id === 'spa') {
+      grandstandSpecs = [
+        // 1. Main Straight Tribuna (Overlooking start grid & pit garages)
+        { t: 0.012, side: -1, dist: this.barrierDistance + 13.0, length: 85, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        // 2. Eau Rouge & Raidillon Stadium (Overlooking iconic uphill climb)
+        { t: 0.22, side: -1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 11.0, rows: 11, sponsor: 'ROLEX', roofColor: 0x00594f },
+        // 3. Kemmel Straight / Les Combes Arena (High-speed braking zone on outside spectator hill)
+        { t: 0.42, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        // 4. Bruxelles / Rivage Downhill Hairpin Viewing Terrace
+        { t: 0.55, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.5, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 },
+        // 5. Pouhon Hillside Stadium (Famous double-apex spectator bowl)
+        { t: 0.65, side: -1, dist: this.barrierDistance + 16.0, length: 85, depth: 14, height: 11.0, rows: 11, sponsor: 'ARAMCO', roofColor: 0x008080 },
+        // 6. Bus Stop Chicane Stadium (Final braking chicane into start straight)
+        { t: 0.965, side: -1, dist: this.barrierDistance + 14.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
+      ];
+    } else if (this.trackData.id === 'suzuka') {
+      // Bespoke Suzuka Circuit Grandstands tailored for Figure-8 geometry with guaranteed zero track intrusion
+      grandstandSpecs = [
+        // 1. Main Straight Grandstand V1/V2 (opposite pit lane & starting grid)
+        { t: 0.015, side: -1, dist: this.barrierDistance + 13.0, length: 85, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        // 2. First Corner / Turn 2 Grandstand B (outside Turn 1-2 braking zone)
+        { t: 0.09, side: -1, dist: this.barrierDistance + 14.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'HONDA', roofColor: 0xcc0000 },
+        // 3. S-Curves Hillside Grandstand D (elevated spectator hill overlooking S-Curves)
+        { t: 0.22, side: -1, dist: this.barrierDistance + 14.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
+        // 4. Hairpin Stadium Grandstand I (outside hairpin perimeter)
+        { t: 0.54, side: 1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        // 5. Back Straight / 130R Approach Grandstand (high-speed viewing arena)
+        { t: 0.88, side: -1, dist: this.barrierDistance + 14.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 },
+        // 6. Casio Triangle Chicane Grandstand R (final chicane entry into start straight)
+        { t: 0.965, side: -1, dist: this.barrierDistance + 13.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 }
+      ];
+    } else {
+      grandstandSpecs = [
+        { t: 0.01, side: -1, dist: this.barrierDistance + 13.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
+        { t: 0.045, side: -1, dist: this.barrierDistance + 13.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
+        { t: 0.14, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
+        { t: 0.50, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.0, rows: 10, sponsor: 'ARAMCO', roofColor: 0x008080 },
+        { t: 0.75, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.5, rows: 10, sponsor: 'EMIRATES', roofColor: 0xd60400 },
+        { t: 0.94, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
+      ];
+    }
+
+    this.grandstandSpecs = grandstandSpecs;
+
+    // Calculate geometric pads for terrain terracing
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const spec of grandstandSpecs) {
+      const pt = this.curve.getPointAt(spec.t);
+      const tgt = this.curve.getTangentAt(spec.t).normalize();
+      const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
+      const outward = new THREE.Vector3().copy(normal).multiplyScalar(spec.side).normalize();
+      const xBasis = new THREE.Vector3().crossVectors(up, outward).normalize();
+
+      const padCenter = new THREE.Vector3().copy(pt).addScaledVector(outward, spec.dist + (spec.depth + 2.0) / 2);
+
+      this.grandstandPads.push({
+        spec,
+        center: padCenter,
+        targetY: pt.y,
+        xBasis,
+        outward,
+        halfLen: (spec.length + 8.0) / 2,
+        halfDepth: (spec.depth + 10.0) / 2,
+        blendMargin: 16.0
+      });
+    }
+  }
+
+  /**
+   * Evaluates terrain elevation at any world coordinate (x, z).
+   * Contours smoothly beneath track ribbons, aprons, and curbs,
+   * guaranteeing that the green terrain never clips over the track surface
+   * at Eau Rouge, Raidillon, Pouhon, or on any 3D undulating circuit,
+   * and carves realistic terraced spectator pads beneath grandstands.
+   */
+  getTerrainHeight(x, z) {
+    const pts = this.sampledPoints;
+    if (!pts || pts.length === 0) return -0.05;
+
+    const count = pts.length;
+    let minDistSq = Infinity;
+    let bestIdx = 0;
+
+    for (let i = 0; i < count; i++) {
+      const p = pts[i];
+      const dx = p.x - x;
+      const dz = p.z - z;
+      const dSq = dx * dx + dz * dz;
+      if (dSq < minDistSq) {
+        minDistSq = dSq;
+        bestIdx = i;
+      }
+    }
+
+    const dist = Math.sqrt(minDistSq);
+    const pt = pts[bestIdx];
+    const halfW = (this.trackWidth || 16.0) / 2;
+    const roadClearance = halfW + 4.5;
+
+    const minTrackY = this._minTrackElevation !== undefined ? this._minTrackElevation : -0.05;
+    const baseGroundLevel = Math.min(-0.05, minTrackY - 1.5);
+
+    // Find minimum elevation in local neighborhood (+/- 8 points ~ 18m along track)
+    // Completely eliminates chord cutting across steep concave dips like Eau Rouge compression
+    let minLocalY = pt.y;
+    for (let j = -8; j <= 8; j++) {
+      const nIdx = (bestIdx + j + count) % count;
+      if (pts[nIdx].y < minLocalY) minLocalY = pts[nIdx].y;
+    }
+
+    // Protection for Crossover / Multi-Level Tracks (e.g. Suzuka Bridge & Underpass):
+    // Search radius expanded to 38.0m for Suzuka so underpass trench stays down at lowest track level
+    const nearbyRadius = (this.trackData && this.trackData.id === 'suzuka') ? 38.0 : roadClearance;
+    let lowestNearbyY = minLocalY;
+    for (let i = 0; i < count; i++) {
+      const p = pts[i];
+      const dx = p.x - x;
+      const dz = p.z - z;
+      if (dx * dx + dz * dz <= nearbyRadius * nearbyRadius) {
+        if (p.y < lowestNearbyY) lowestNearbyY = p.y;
+      }
+    }
+
+    const safeRoadY = Math.min(pt.y - 0.25, lowestNearbyY - 0.25, minLocalY - 0.15);
+
+    if (dist <= roadClearance) {
+      return safeRoadY;
+    }
+
+    const maxInfluenceDist = 140.0;
+    let rawY = baseGroundLevel;
+    if (dist < maxInfluenceDist) {
+      const u = (dist - roadClearance) / (maxInfluenceDist - roadClearance);
+      const blend = 0.5 * (1.0 + Math.cos(Math.PI * u));
+      rawY = blend * safeRoadY + (1.0 - blend) * baseGroundLevel;
+    }
+
+    let currentH = Math.min(rawY, minLocalY - 0.15, pt.y - 0.15);
+
+    // Dedicated underpass cutting protection for Suzuka:
+    // Any point in the Degner 2 -> Underpass -> Hairpin approach corridor stays firmly below track level
+    if (this.trackData && this.trackData.id === 'suzuka') {
+      if (x >= -135 && x <= -65 && z >= -85 && z <= 25) {
+        const uStart = Math.floor(0.39 * count);
+        const uEnd = Math.ceil(0.46 * count);
+        let minUnderDist = Infinity;
+        for (let ui = uStart; ui <= uEnd; ui++) {
+          const upPt = pts[ui % count];
+          const ud = Math.hypot(upPt.x - x, upPt.z - z);
+          if (ud < minUnderDist) minUnderDist = ud;
+        }
+        if (minUnderDist <= 28.0) {
+          currentH = Math.min(currentH, -0.35);
+        }
+      }
+    }
+
+    // Terraced spectator pads beneath grandstands (carves flat plateaus into the hillsides)
+    if (this.grandstandPads && this.grandstandPads.length > 0) {
+      for (let k = 0; k < this.grandstandPads.length; k++) {
+        const pad = this.grandstandPads[k];
+        const dx = x - pad.center.x;
+        const dz = z - pad.center.z;
+        const localX = dx * pad.xBasis.x + dz * pad.xBasis.z;
+        const localZ = dx * pad.outward.x + dz * pad.outward.z;
+
+        const dX = Math.max(0, Math.abs(localX) - pad.halfLen);
+        const dZ = Math.max(0, Math.abs(localZ) - pad.halfDepth);
+        const edgeDist = Math.hypot(dX, dZ);
+
+        if (edgeDist < pad.blendMargin) {
+          const padY = pad.targetY - 0.25;
+          if (edgeDist <= 0) {
+            currentH = padY;
+          } else {
+            const tBlend = edgeDist / pad.blendMargin;
+            const w = 0.5 * (1.0 + Math.cos(Math.PI * tBlend));
+            currentH = w * padY + (1.0 - w) * currentH;
+          }
+        }
+      }
+    }
+
+    // Never allow grandstand pads or natural slopes to encroach higher than safe road elevation near track
+    if (dist <= roadClearance + 8.0) {
+      currentH = Math.min(currentH, safeRoadY);
+    }
+
+    return currentH;
+  }
+
   buildEnvironment() {
     const theme = this.trackData.theme || {};
     const lighting = theme.lighting || {};
@@ -154,9 +404,31 @@ export class Track {
       }
     }
 
-    // 2. Thematic Terrain Ground Plane (2400m x 2400m)
-    const groundGeo = new THREE.PlaneGeometry(2400, 2400, 32, 32);
+    // 2. Thematic Terrain Ground Mesh with Elevation Contouring (2600m x 2600m, 240x240 grid)
+    const terrainSize = 2600;
+    const terrainSegments = 240;
+    const groundGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
     groundGeo.rotateX(-Math.PI / 2);
+
+    const posAttr = groundGeo.attributes.position;
+    const pArr = posAttr.array;
+    const vCount = posAttr.count;
+    const halfW = (this.trackWidth || 16.0) / 2;
+
+    for (let i = 0; i < vCount; i++) {
+      const vx = pArr[i * 3];
+      const vz = pArr[i * 3 + 2];
+      let gy = this.getTerrainHeight(vx, vz);
+
+      // Strict post-processing ground clearance check against racetrack spline
+      const snap = this.getClosestTrackPoint(vx, vz, null, null);
+      if (snap && snap.distance <= (halfW + 4.5)) {
+        gy = Math.min(gy, snap.point.y - 0.25);
+      }
+      pArr[i * 3 + 1] = gy;
+    }
+    posAttr.needsUpdate = true;
+    groundGeo.computeVertexNormals();
 
     const groundCanvas = document.createElement('canvas');
     groundCanvas.width = 512;
@@ -192,6 +464,25 @@ export class Track {
           }
         }
       }
+    } else if (theme.groundType === 'MARINA_HARBOR') {
+      // Mediterranean harbor promenade pavers & textured maritime waterfront
+      gctx.fillStyle = detailHex;
+      for (let x = 0; x < 512; x += 32) {
+        for (let y = 0; y < 512; y += 32) {
+          if ((x / 32 + y / 32) % 2 === 0) {
+            gctx.fillRect(x + 1, y + 1, 30, 30);
+          }
+        }
+      }
+      // Paved harbor pier curb lines
+      gctx.strokeStyle = '#2d3748';
+      gctx.lineWidth = 2;
+      for (let x = 0; x <= 512; x += 128) {
+        gctx.beginPath();
+        gctx.moveTo(x, 0);
+        gctx.lineTo(x, 512);
+        gctx.stroke();
+      }
     } else {
       // Standard mowing lawn stripes
       gctx.fillStyle = detailHex;
@@ -211,7 +502,7 @@ export class Track {
     });
 
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.05;
+    groundMesh.position.y = 0;
     groundMesh.receiveShadow = true;
     this.trackRoot.add(groundMesh);
 
@@ -367,7 +658,8 @@ export class Track {
       normalMap: asphaltNormalMap,
       normalScale: new THREE.Vector2(0.5, 0.5),
       roughness: 0.85,
-      metalness: 0.1
+      metalness: 0.1,
+      side: THREE.DoubleSide
     });
 
     const roadMesh = new THREE.Mesh(geo, roadMat);
@@ -409,7 +701,8 @@ export class Track {
     const curbMat = new THREE.MeshStandardMaterial({
       map: curbTex,
       roughness: 0.5,
-      metalness: 0.2
+      metalness: 0.2,
+      side: THREE.DoubleSide
     });
 
     const createCurbMesh = (sideSign) => {
@@ -470,7 +763,8 @@ export class Track {
     const barrierMat = new THREE.MeshStandardMaterial({
       color: theme.barrierColor || 0x94a3b8,
       metalness: theme.barrierType === 'CONCRETE_WALL' ? 0.1 : 0.7,
-      roughness: theme.barrierType === 'CONCRETE_WALL' ? 0.9 : 0.35
+      roughness: theme.barrierType === 'CONCRETE_WALL' ? 0.9 : 0.35,
+      side: THREE.DoubleSide
     });
 
     const postMat = new THREE.MeshStandardMaterial({
@@ -591,6 +885,250 @@ export class Track {
         this.physicsBodies.push(rightBody);
       }
     }
+  }
+
+  buildSuzukaCrossoverBridge() {
+    const halfW = this.trackWidth / 2;
+    const count = this.sampleCount;
+    const pts = this.sampledPoints;
+    const up = new THREE.Vector3(0, 1, 0);
+
+    // Suzuka crossover bridge span along the spline: t from 0.585 to 0.680
+    const startT = 0.585;
+    const endT = 0.680;
+    const startIdx = Math.floor(startT * count);
+    const endIdx = Math.ceil(endT * count);
+    const numSlices = endIdx - startIdx + 1;
+
+    // Materials - Realistic light architectural highway concrete and industrial steel with subtle ambient bounce
+    const concreteMat = new THREE.MeshStandardMaterial({
+      color: 0xcfd4dc, // Clean structural highway concrete
+      roughness: 0.72,
+      metalness: 0.08,
+      emissive: 0x353b45, // Soft ambient fill so underside is clearly visible
+      side: THREE.DoubleSide
+    });
+
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0x5a6578, // Industrial structural steel girders
+      roughness: 0.42,
+      metalness: 0.65,
+      emissive: 0x222832
+    });
+
+    const pierMat = new THREE.MeshStandardMaterial({
+      color: 0xb4bcc8, // Reinforced concrete pier columns
+      roughness: 0.7,
+      metalness: 0.05,
+      emissive: 0x252a33
+    });
+
+    // 1. Continuous 3D Solid Concrete Bridge Deck Structure (Soffit + Fascias + Parapets)
+    const deckThickness = 1.1; // 1.1m thick concrete box girder slab
+    const wallDist = this.barrierDistance + 0.35; // 11.6m
+    const wallHeight = 1.35; // 1.35m parapet height
+
+    const vertices = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    for (let s = 0; s < numSlices; s++) {
+      const idx = (startIdx + s) % count;
+      const pt = pts[idx];
+      const tgt = this.sampledTangents[idx];
+      const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
+
+      // Smoothly blend bridge depth into the natural terrain at the abutment ends
+      const edgeFactor = Math.min(1.0, Math.min(s / 4.0, (numSlices - 1 - s) / 4.0));
+      const curThick = deckThickness * edgeFactor;
+      const yBot = pt.y - curThick;
+      const yWall = pt.y + wallHeight * edgeFactor;
+
+      const pBotL = new THREE.Vector3().copy(pt).addScaledVector(normal, -wallDist);
+      const pBotR = new THREE.Vector3().copy(pt).addScaledVector(normal, wallDist);
+      const pTopL = new THREE.Vector3().copy(pt).addScaledVector(normal, -wallDist);
+      const pTopR = new THREE.Vector3().copy(pt).addScaledVector(normal, wallDist);
+      const pInL = new THREE.Vector3().copy(pt).addScaledVector(normal, -(wallDist - 0.4));
+      const pInR = new THREE.Vector3().copy(pt).addScaledVector(normal, (wallDist - 0.4));
+
+      const vBase = s * 6;
+      vertices.push(
+        pBotL.x, yBot, pBotL.z, // 0
+        pBotR.x, yBot, pBotR.z, // 1
+        pTopL.x, yWall, pTopL.z, // 2
+        pTopR.x, yWall, pTopR.z, // 3
+        pInL.x, yWall, pInL.z,   // 4
+        pInR.x, yWall, pInR.z    // 5
+      );
+
+      normals.push(
+        0, -1, 0,
+        0, -1, 0,
+        -normal.x, 0, -normal.z,
+        normal.x, 0, normal.z,
+        normal.x, 0, normal.z,
+        -normal.x, 0, -normal.z
+      );
+
+      const u = s / (numSlices - 1);
+      uvs.push(0, u, 1, u, 0, u, 1, u, 0, u, 1, u);
+
+      if (s < numSlices - 1) {
+        const next = (s + 1) * 6;
+        // Bottom Soffit quad (visible from underpass below!)
+        indices.push(vBase + 0, vBase + 1, next + 1);
+        indices.push(vBase + 0, next + 1, next + 0);
+
+        // Left Outer Fascia quad
+        indices.push(vBase + 0, next + 0, next + 2);
+        indices.push(vBase + 0, next + 2, vBase + 2);
+
+        // Right Outer Fascia quad
+        indices.push(vBase + 1, vBase + 3, next + 3);
+        indices.push(vBase + 1, next + 3, next + 1);
+
+        // Left Parapet Top quad
+        indices.push(vBase + 2, next + 2, next + 4);
+        indices.push(vBase + 2, next + 4, vBase + 4);
+
+        // Right Parapet Top quad
+        indices.push(vBase + 3, vBase + 5, next + 5);
+        indices.push(vBase + 3, next + 5, next + 3);
+      }
+    }
+
+    const bridgeGeo = new THREE.BufferGeometry();
+    bridgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    bridgeGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    bridgeGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    bridgeGeo.setIndex(indices);
+    const bridgeMesh = new THREE.Mesh(bridgeGeo, concreteMat);
+    bridgeMesh.castShadow = true;
+    bridgeMesh.receiveShadow = true;
+    this.trackRoot.add(bridgeMesh);
+
+    // 2. Longitudinal Structural Steel Girders running underneath the bridge deck
+    const girderOffsets = [-5.5, 0.0, 5.5];
+    const girderGeo = new THREE.BoxGeometry(0.75, 0.9, 4.2);
+    for (const gOffset of girderOffsets) {
+      for (let s = 2; s < numSlices - 2; s += 2) {
+        const idx = (startIdx + s) % count;
+        const pt = pts[idx];
+        const tgt = this.sampledTangents[idx];
+        const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
+
+        const gPos = new THREE.Vector3().copy(pt).addScaledVector(normal, gOffset);
+        const girder = new THREE.Mesh(girderGeo, steelMat);
+        girder.position.set(gPos.x, pt.y - 1.1 - 0.45, gPos.z);
+        girder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tgt);
+        girder.castShadow = true;
+        this.trackRoot.add(girder);
+      }
+    }
+
+    // 3. Heavy Concrete Bridge Pier Columns outside the Underpass Track
+    const pierRadius = 0.9;
+    const pierHeight = 6.4;
+    const colGeo = new THREE.CylinderGeometry(pierRadius, pierRadius * 1.12, pierHeight, 16);
+    const colCapGeo = new THREE.BoxGeometry(2.6, 0.95, 18.5);
+    const footingGeo = new THREE.BoxGeometry(2.8, 0.8, 2.8);
+
+    // Safety yellow & dark charcoal chevron hazard pattern on pier footings
+    const hazardCanvas = document.createElement('canvas');
+    hazardCanvas.width = 256;
+    hazardCanvas.height = 128;
+    const hctx = hazardCanvas.getContext('2d');
+    hctx.fillStyle = '#facc15';
+    hctx.fillRect(0, 0, 256, 128);
+    hctx.fillStyle = '#111827';
+    for (let x = -128; x < 384; x += 48) {
+      hctx.beginPath();
+      hctx.moveTo(x, 0);
+      hctx.lineTo(x + 24, 0);
+      hctx.lineTo(x - 24, 128);
+      hctx.lineTo(x - 48, 128);
+      hctx.fill();
+    }
+    const hazardTex = new THREE.CanvasTexture(hazardCanvas);
+    hazardTex.wrapS = THREE.RepeatWrapping;
+    hazardTex.repeat.set(2, 1);
+    const hazardMat = new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.6 });
+
+    const underPt = this.curve.getPointAt(0.412);
+    const underTgt = this.curve.getTangentAt(0.412).normalize();
+    const underNorm = new THREE.Vector3().crossVectors(underTgt, up).normalize();
+
+    for (const sideSign of [-1, 1]) {
+      const pierCenter = new THREE.Vector3().copy(underPt).addScaledVector(underNorm, sideSign * (halfW + 4.2));
+
+      // Twin supporting columns per side
+      for (const colOffset of [-3.8, 3.8]) {
+        const colPos = new THREE.Vector3().copy(pierCenter).addScaledVector(underTgt, colOffset);
+        const col = new THREE.Mesh(colGeo, pierMat);
+        col.position.set(colPos.x, pierHeight / 2 - 0.25, colPos.z);
+        col.castShadow = true;
+        this.trackRoot.add(col);
+
+        // Crash footing with hazard stripes
+        const baseRing = new THREE.Mesh(footingGeo, hazardMat);
+        baseRing.position.set(colPos.x, 0.2, colPos.z);
+        baseRing.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), underTgt);
+        this.trackRoot.add(baseRing);
+      }
+
+      // Concrete Pier Cap Beam (Crosshead)
+      const cap = new THREE.Mesh(colCapGeo, pierMat);
+      cap.position.set(pierCenter.x, pierHeight - 0.45, pierCenter.z);
+      cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), underTgt);
+      cap.castShadow = true;
+      this.trackRoot.add(cap);
+    }
+
+    // 4. Iconic Overhead Highway Bridge Fascia Banner mounted flush on outer bridge fascia
+    const bannerCanvas = document.createElement('canvas');
+    bannerCanvas.width = 1024;
+    bannerCanvas.height = 128;
+    const bctx = bannerCanvas.getContext('2d');
+    bctx.fillStyle = '#0f172a';
+    bctx.fillRect(0, 0, 1024, 128);
+    bctx.fillStyle = '#e10600';
+    bctx.fillRect(0, 0, 24, 128);
+    bctx.fillRect(1000, 0, 24, 128);
+    bctx.fillRect(24, 114, 976, 14);
+    bctx.fillStyle = '#ffffff';
+    bctx.font = '900 38px Arial, sans-serif';
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'middle';
+    bctx.fillText('🏎️  SUZUKA CIRCUIT  •  JAPANESE GRAND PRIX  •  HONDA  🇯🇵', 512, 60);
+
+    const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+    const bannerMat = new THREE.MeshBasicMaterial({ map: bannerTex });
+
+    const bridgePt = this.curve.getPointAt(0.635);
+    const bridgeTgt = this.curve.getTangentAt(0.635).normalize();
+    const bridgeNorm = new THREE.Vector3().crossVectors(bridgeTgt, up).normalize();
+
+    // Facing oncoming cars approaching from Degner:
+    const fasciaDir = new THREE.Vector3(-bridgeNorm.x, 0, -bridgeNorm.z).normalize();
+    const bannerPos = new THREE.Vector3().copy(bridgePt)
+      .addScaledVector(bridgeNorm, -wallDist - 0.08);
+    bannerPos.y += 0.45; // Centered on parapet fascia
+
+    const bannerGeo = new THREE.PlaneGeometry(22.0, 1.7);
+    const bannerMesh = new THREE.Mesh(bannerGeo, bannerMat);
+    bannerMesh.position.copy(bannerPos);
+    bannerMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fasciaDir);
+    this.trackRoot.add(bannerMesh);
+
+    // 5. Underpass Ceiling Floodlights (Authentic underpass illumination)
+    const underLight1 = new THREE.PointLight(0xfff6ea, 2.0, 26, 1.2);
+    underLight1.position.set(underPt.x - underTgt.x * 3.5, underPt.y + 3.8, underPt.z - underTgt.z * 3.5);
+    this.trackRoot.add(underLight1);
+
+    const underLight2 = new THREE.PointLight(0xfff6ea, 2.0, 26, 1.2);
+    underLight2.position.set(underPt.x + underTgt.x * 3.5, underPt.y + 3.8, underPt.z + underTgt.z * 3.5);
+    this.trackRoot.add(underLight2);
   }
 
   buildStartFinishLine() {
@@ -761,6 +1299,15 @@ export class Track {
       const curvature = Math.abs(new THREE.Vector3().crossVectors(dir1, dir2).y);
 
       if (curvature > 0.02) {
+        // Skip elevated bridge spans where there is no roadside terrain
+        if (this.trackData && this.trackData.id === 'suzuka') {
+          const tVal = i / count;
+          if (tVal >= 0.54 && tVal <= 0.72) {
+            i += 10;
+            continue;
+          }
+        }
+
         // Place 150m, 100m, 50m before corner entry
         const offsets = [-14, -10, -6];
         const texs = [tex150, tex100, tex50];
@@ -772,6 +1319,15 @@ export class Track {
           const mNorm = new THREE.Vector3().crossVectors(mTgt, up).normalize();
 
           const bPos = new THREE.Vector3().copy(mPt).addScaledVector(mNorm, -(halfW + 2.4));
+
+          // Skip if on elevated bridge or if ground elevation is far below track
+          if (this.trackData && this.trackData.id === 'suzuka') {
+            const m_tVal = mIdx / count;
+            if (m_tVal >= 0.54 && m_tVal <= 0.72) continue;
+          }
+          const groundY = this.getTerrainHeight(bPos.x, bPos.z);
+          if (Math.abs(groundY - mPt.y) > 1.8) continue;
+
           const markerGroup = new THREE.Group();
 
           const post = new THREE.Mesh(postGeo, pMat);
@@ -799,6 +1355,12 @@ export class Track {
     const up = new THREE.Vector3(0, 1, 0);
 
     for (let i = 20; i < count; i += 30) {
+      // Skip elevated bridge span for Suzuka as bridge has integrated parapets and banners
+      if (this.trackData && this.trackData.id === 'suzuka') {
+        const tVal = i / count;
+        if (tVal >= 0.54 && tVal <= 0.72) continue;
+      }
+
       const pt = pts[i];
       const tgt = this.sampledTangents[i];
       const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
@@ -946,16 +1508,42 @@ export class Track {
     gsGroup.position.copy(pt).addScaledVector(outward, spec.dist);
 
     const concreteMat = new THREE.MeshStandardMaterial({ color: 0x474f5e, roughness: 0.9, metalness: 0.1 });
+    const concourseMat = new THREE.MeshStandardMaterial({ color: 0x333b47, roughness: 0.92, metalness: 0.08 });
     const steelMat = new THREE.MeshStandardMaterial({ color: 0x222630, roughness: 0.4, metalness: 0.8 });
     const crowdMat = new THREE.MeshStandardMaterial({ map: crowdTex, roughness: 0.75, metalness: 0.1 });
     const roofMat = new THREE.MeshStandardMaterial({ color: spec.roofColor || 0xe10600, roughness: 0.35, metalness: 0.65 });
     const railingMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.85 });
 
-    // 1. Foundation Base Slab
-    const baseGeo = new THREE.BoxGeometry(spec.length, 1.2, spec.depth + 2);
+    // 0. Paved Spectator Concourse Apron (Pedestrian plaza extending around the grandstand)
+    const apronGeo = new THREE.BoxGeometry(spec.length + 6.0, 0.35, spec.depth + 6.0);
+    const apronMesh = new THREE.Mesh(apronGeo, concourseMat);
+    apronMesh.position.set(0, 0.175, (spec.depth + 2.0) / 2);
+    apronMesh.receiveShadow = true;
+    gsGroup.add(apronMesh);
+
+    // 1. Foundation Base Slab & Deep Retaining Skirt (Solid 7m deep foundation into the earth)
+    const skirtDepth = 7.0;
+    const baseGeo = new THREE.BoxGeometry(spec.length + 1.2, skirtDepth + 1.2, spec.depth + 3.0);
     const baseMesh = new THREE.Mesh(baseGeo, concreteMat);
-    baseMesh.position.set(0, 0.6, (spec.depth + 2) / 2);
+    baseMesh.position.set(0, 1.2 - (skirtDepth + 1.2) / 2, (spec.depth + 2) / 2);
+    baseMesh.receiveShadow = true;
     gsGroup.add(baseMesh);
+
+    // Concrete side retaining walls (anchoring into slope)
+    const sideWallGeo = new THREE.BoxGeometry(0.8, spec.height * 0.75 + skirtDepth, spec.depth + 3.0);
+    const leftSideWall = new THREE.Mesh(sideWallGeo, concreteMat);
+    leftSideWall.position.set(-spec.length / 2 - 0.4, 1.2 + (spec.height * 0.75 - skirtDepth) / 2, (spec.depth + 2) / 2);
+    gsGroup.add(leftSideWall);
+
+    const rightSideWall = new THREE.Mesh(sideWallGeo, concreteMat);
+    rightSideWall.position.set(spec.length / 2 + 0.4, 1.2 + (spec.height * 0.75 - skirtDepth) / 2, (spec.depth + 2) / 2);
+    gsGroup.add(rightSideWall);
+
+    // Rear concrete retaining wall
+    const rearWallGeo = new THREE.BoxGeometry(spec.length + 2.0, spec.height * 0.8 + skirtDepth, 0.8);
+    const rearWall = new THREE.Mesh(rearWallGeo, concreteMat);
+    rearWall.position.set(0, 1.2 + (spec.height * 0.8 - skirtDepth) / 2, spec.depth + 2.4);
+    gsGroup.add(rearWall);
 
     // 2. Stepped Bleachers
     const rowCount = spec.rows;
@@ -1150,124 +1738,8 @@ export class Track {
     this.animatedFlags = [];
     const crowdTex = this.createCrowdTexture();
 
-    let grandstandSpecs = [];
-
-    if (this.trackData.id === 'monza') {
-      grandstandSpecs = [
-        // 1. Main Straight Tribuna Centrale (Overlooking starting grid & gantry)
-        {
-          t: 0.008,
-          side: -1,
-          dist: this.barrierDistance + 13.0,
-          length: 90,
-          depth: 14,
-          height: 10.5,
-          rows: 10,
-          sponsor: 'FORMULA 1',
-          roofColor: 0xe10600
-        },
-        // 2. Main Straight Grandstand B (Opposite pit boxes)
-        {
-          t: 0.045,
-          side: -1,
-          dist: this.barrierDistance + 13.0,
-          length: 90,
-          depth: 14,
-          height: 10.5,
-          rows: 10,
-          sponsor: 'PIRELLI',
-          roofColor: 0x111827
-        },
-        // 3. Prima Variante / Turn 1 Braking Stadium
-        {
-          t: 0.125,
-          side: -1,
-          dist: this.barrierDistance + 15.0,
-          length: 75,
-          depth: 14,
-          height: 11.0,
-          rows: 11,
-          sponsor: 'ROLEX',
-          roofColor: 0x00594f
-        },
-        // 4. Variante Ascari Chicane Stadium
-        {
-          t: 0.72,
-          side: -1,
-          dist: this.barrierDistance + 15.0,
-          length: 70,
-          depth: 13,
-          height: 10.0,
-          rows: 10,
-          sponsor: 'QATAR AIRWAYS',
-          roofColor: 0x5c0632
-        },
-        // 5. Curva Parabolica - Last Turn Entry Arena (Overlooking high-speed entry sweep)
-        {
-          t: 0.92,
-          side: -1,
-          dist: this.barrierDistance + 16.0,
-          length: 75,
-          depth: 14,
-          height: 10.5,
-          rows: 10,
-          sponsor: 'HEINEKEN',
-          roofColor: 0x008234
-        },
-        // 6. Curva Parabolica - Last Turn Exit Stadium (Overlooking acceleration onto Main Straight)
-        {
-          t: 0.965,
-          side: -1,
-          dist: this.barrierDistance + 14.0,
-          length: 75,
-          depth: 14,
-          height: 10.5,
-          rows: 10,
-          sponsor: 'DHL',
-          roofColor: 0xffcc00
-        }
-      ];
-    } else if (this.trackData.id === 'monaco') {
-      // Custom spectator grandstands tailored for Monaco GP street geometry (guaranteed zero clipping)
-      grandstandSpecs = [
-        // Grandstand K (Overlooking Harbor & Swimming Pool complex)
-        { t: 0.88, side: -1, dist: this.barrierDistance + 5.0, length: 50, depth: 8, height: 7.5, rows: 6, sponsor: 'ROLEX', roofColor: 0x00594f },
-        // Grandstand T (Overlooking Pit Straight & Rascasse exit)
-        { t: 0.985, side: -1, dist: this.barrierDistance + 5.0, length: 42, depth: 8, height: 7.0, rows: 6, sponsor: 'TAG HEUER', roofColor: 0xe10600 },
-        // Casino Square Viewing Terrace
-        { t: 0.38, side: 1, dist: this.barrierDistance + 7.0, length: 45, depth: 8, height: 7.0, rows: 6, sponsor: 'MONTE CARLO', roofColor: 0x1e3a8a }
-      ];
-    } else if (this.trackData.id === 'silverstone') {
-      // Bespoke Silverstone Circuit Grandstands tailored to authentic layout with guaranteed zero clipping
-      grandstandSpecs = [
-        // 1. Hamilton Straight Main Grandstand (Overlooking starting grid & pit lane)
-        { t: 0.975, side: -1, dist: this.barrierDistance + 14.0, length: 90, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
-        // 2. Abbey Grandstand (Outside Turn 1 high-speed sweeper)
-        { t: 0.05, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
-        // 3. Wellington Straight Grandstand (DRS overtaking zone)
-        { t: 0.25, side: 1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
-        // 4. Luffield Complex Stadium Grandstand (Overlooking carousel and Woodcote exit)
-        { t: 0.38, side: -1, dist: this.barrierDistance + 15.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'BRITISH GP', roofColor: 0x1e3a8a },
-        // 5. Copse Corner Grandstand (Overlooking 290 km/h blind right entry)
-        { t: 0.505, side: -1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'ARAMCO', roofColor: 0x008080 },
-        // 6. Becketts Stadium Grandstand (Iconic high-speed chicane viewing)
-        { t: 0.61, side: 1, dist: this.barrierDistance + 16.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'QATAR AIRWAYS', roofColor: 0x5c0632 },
-        // 7. Stowe Corner Grandstand (End of Hangar Straight heavy braking arena)
-        { t: 0.825, side: 1, dist: this.barrierDistance + 16.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
-      ];
-    } else {
-      // Robust spectator distribution for other circuits
-      grandstandSpecs = [
-        { t: 0.01, side: -1, dist: this.barrierDistance + 13.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'FORMULA 1', roofColor: 0xe10600 },
-        { t: 0.045, side: -1, dist: this.barrierDistance + 13.0, length: 80, depth: 14, height: 10.5, rows: 10, sponsor: 'PIRELLI', roofColor: 0x111827 },
-        { t: 0.14, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.5, rows: 10, sponsor: 'ROLEX', roofColor: 0x00594f },
-        { t: 0.50, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.0, rows: 10, sponsor: 'ARAMCO', roofColor: 0x008080 },
-        { t: 0.75, side: -1, dist: this.barrierDistance + 15.0, length: 70, depth: 14, height: 10.5, rows: 10, sponsor: 'EMIRATES', roofColor: 0xd60400 },
-        { t: 0.94, side: -1, dist: this.barrierDistance + 15.0, length: 75, depth: 14, height: 10.5, rows: 10, sponsor: 'DHL', roofColor: 0xffcc00 }
-      ];
-    }
-
-    for (const spec of grandstandSpecs) {
+    const specs = this.grandstandSpecs || [];
+    for (const spec of specs) {
       this.buildSingleGrandstand(spec, crowdTex);
     }
   }
@@ -1465,8 +1937,18 @@ export class Track {
         // Left and right trees with random jitter
         const sideOffsets = [-1, 1];
         for (const side of sideOffsets) {
+          // Do not spawn trees on or under the elevated bridge span
+          if (this.trackData && this.trackData.id === 'suzuka') {
+            const tVal = i / count;
+            if (tVal >= 0.54 && tVal <= 0.72) continue;
+          }
+
           const dist = bDist + 6 + Math.random() * 22;
           const tPos = new THREE.Vector3().copy(pt).addScaledVector(normal, side * dist);
+
+          // Strict clearance check against the ENTIRE racetrack ribbon:
+          const check = this.getClosestTrackPoint(tPos.x, tPos.z);
+          if (check.distance < (this.trackWidth / 2 + 5.0)) continue;
 
           const tree = new THREE.Group();
           const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -1479,7 +1961,8 @@ export class Track {
 
           const s = 0.8 + Math.random() * 0.5;
           tree.scale.set(s, s, s);
-          tree.position.set(tPos.x, pt.y, tPos.z);
+          const treeY = this.getTerrainHeight(tPos.x, tPos.z);
+          tree.position.set(tPos.x, treeY, tPos.z);
           this.trackRoot.add(tree);
         }
       }
@@ -1508,7 +1991,8 @@ export class Track {
           head.position.set(0, 18, 0);
           lightGroup.add(head);
 
-          lightGroup.position.set(lPos.x, pt.y, lPos.z);
+          const lightY = this.getTerrainHeight(lPos.x, lPos.z);
+          lightGroup.position.set(lPos.x, lightY, lPos.z);
           this.trackRoot.add(lightGroup);
         }
       }
@@ -1531,7 +2015,8 @@ export class Track {
         if (check.distance < (this.trackWidth / 2 + 2.5)) continue;
 
         const block = new THREE.Mesh(blockGeo, wallMat);
-        block.position.set(wPos.x, pt.y + 2.75, wPos.z);
+        const wallY = this.getTerrainHeight(wPos.x, wPos.z);
+        block.position.set(wPos.x, wallY + 2.75, wPos.z);
         block.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tgt);
         this.trackRoot.add(block);
       }
@@ -1550,25 +2035,107 @@ export class Track {
     }
   }
 
-  getClosestTrackPoint(x, z) {
+  getClosestTrackPoint(x, z, y = null, hintT = null) {
+    const pts = this.sampledPoints;
+    if (!pts || pts.length === 0) {
+      return {
+        point: new THREE.Vector3(x, y || 0, z),
+        tangent: new THREE.Vector3(0, 0, 1),
+        index: 0,
+        t: 0,
+        distance: 0
+      };
+    }
+    const len = pts.length;
     let minDistSq = Infinity;
     let bestIdx = 0;
-    const pts = this.sampledPoints;
-    const len = pts.length;
-    for (let i = 0; i < len; i++) {
-      const dx = pts[i].x - x;
-      const dz = pts[i].z - z;
-      const dSq = dx * dx + dz * dz;
-      if (dSq < minDistSq) {
-        minDistSq = dSq;
-        bestIdx = i;
+
+    // 1. If hintT is provided (e.g. car progress from previous frame), search in local window first
+    // This prevents crossover hopping and backwards snapping on multi-level tracks (like Suzuka Figure-8)
+    if (hintT !== null && hintT !== undefined && hintT >= 0 && hintT <= 1) {
+      const hintIdx = Math.round(hintT * len) % len;
+      const windowRadius = Math.max(35, Math.floor(len * 0.12));
+      let localMinDistSq = Infinity;
+      let localBestIdx = hintIdx;
+
+      for (let offset = -windowRadius; offset <= windowRadius; offset++) {
+        const i = (hintIdx + offset + len) % len;
+        const p = pts[i];
+        const dx = p.x - x;
+        const dz = p.z - z;
+        const dy = (y !== null && y !== undefined) ? (p.y - y) * 2.5 : 0;
+        const dSq = dx * dx + dz * dz + dy * dy;
+        if (dSq < localMinDistSq) {
+          localMinDistSq = dSq;
+          localBestIdx = i;
+        }
+      }
+
+      // If local window found a candidate within 35m, accept it immediately
+      if (localMinDistSq < 1225) { // 35^2
+        minDistSq = localMinDistSq;
+        bestIdx = localBestIdx;
       }
     }
-    const dist = Math.sqrt(minDistSq);
-    const t = bestIdx / (len || 1);
+
+    // 2. Global search fallback (e.g. initial spawn, car teleport, or far off-track)
+    if (minDistSq === Infinity) {
+      for (let i = 0; i < len; i++) {
+        const p = pts[i];
+        const dx = p.x - x;
+        const dz = p.z - z;
+        const dy = (y !== null && y !== undefined) ? (p.y - y) * 2.5 : 0;
+        const dSq = dx * dx + dz * dz + dy * dy;
+        if (dSq < minDistSq) {
+          minDistSq = dSq;
+          bestIdx = i;
+        }
+      }
+    }
+
+    // Check adjacent segments [prevIdx, bestIdx] and [bestIdx, nextIdx] for continuous projection
+    const prevIdx = (bestIdx - 1 + len) % len;
+    const nextIdx = (bestIdx + 1) % len;
+
+    const projectOnSeg = (i0, i1) => {
+      const A = pts[i0];
+      const B = pts[i1];
+      const segX = B.x - A.x;
+      const segZ = B.z - A.z;
+      const segLenSq = segX * segX + segZ * segZ;
+      if (segLenSq < 1e-6) return { distSq: (x - A.x) ** 2 + (z - A.z) ** 2, s: 0, i0, i1 };
+      const s = Math.max(0, Math.min(1, ((x - A.x) * segX + (z - A.z) * segZ) / segLenSq));
+      const px = A.x + s * segX;
+      const pz = A.z + s * segZ;
+      const distSq = (x - px) ** 2 + (z - pz) ** 2;
+      return { distSq, s, px, pz, i0, i1 };
+    };
+
+    const segPrev = projectOnSeg(prevIdx, bestIdx);
+    const segNext = projectOnSeg(bestIdx, nextIdx);
+    const bestSeg = (segPrev.distSq <= segNext.distSq) ? segPrev : segNext;
+
+    const A = pts[bestSeg.i0];
+    const B = pts[bestSeg.i1];
+    const s = bestSeg.s;
+    const projX = A.x + s * (B.x - A.x);
+    const projY = A.y + s * (B.y - A.y);
+    const projZ = A.z + s * (B.z - A.z);
+
+    const tgA = this.sampledTangents[bestSeg.i0] || new THREE.Vector3(0, 0, 1);
+    const tgB = this.sampledTangents[bestSeg.i1] || new THREE.Vector3(0, 0, 1);
+    const interpTg = new THREE.Vector3(
+      tgA.x + s * (tgB.x - tgA.x),
+      tgA.y + s * (tgB.y - tgA.y),
+      tgA.z + s * (tgB.z - tgA.z)
+    ).normalize();
+
+    const t = (bestSeg.i0 + s) / len;
+    const dist = Math.sqrt(bestSeg.distSq);
+
     return {
-      point: pts[bestIdx] || new THREE.Vector3(x, 0, z),
-      tangent: (this.sampledTangents && this.sampledTangents[bestIdx]) || new THREE.Vector3(0, 0, 1),
+      point: new THREE.Vector3(projX, projY, projZ),
+      tangent: interpTg,
       index: bestIdx,
       t: t,
       distance: dist

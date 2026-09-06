@@ -154,38 +154,53 @@ export const DIFFICULTY_MODES = {
 
 export const DIFFICULTY_CONFIG = {
   EASY: {
-    speedMultiplier: 0.84, // 84% pace: smooth and fun, player can easily overtake and win
-    earlyBrakingDistance: 16.0, // Early braking into corners (gives player easy dive-bomb overtakes)
-    aggression: 0.2,
-    yieldDistance: 2.2, // Emergency proximity margin
-    overtakeCapable: true, // CAN overtake slower/stopped cars ahead
-    defendApex: false, // Does NOT block or defend; leaves open racing line for player
+    name: 'Noob / Casual Racer',
+    speedMultiplier: 0.80, // Approachable, casual pace
+    accelMultiplier: 0.78,
+    earlyBrakingDistance: 15.0, // Beginners brake early
+    aggression: 0.20,
+    yieldDistance: 2.6,
+    overtakeCapable: true,
+    defendApex: false, // Never aggressively blocks
     drafting: false,
-    overtakeCommitDistance: 26.0, // Lookahead to change lanes to pass
-    qualiMinTime: 82.5,
-    qualiMaxTime: 88.5
+    overtakeCommitDistance: 20.0,
+    lineVariance: 0.40, // Imperfect wandering racing line
+    steerWobble: 0.035, // Natural human hand micro-jitter on wheel
+    yieldWhenPassed: 0.85, // Courteously leaves space and lifts throttle when player attacks
+    qualiMinTime: 84.0,
+    qualiMaxTime: 90.0
   },
   MEDIUM: {
-    speedMultiplier: 0.94, // 94% pace: equal, fair match to player performance for balanced practice
-    earlyBrakingDistance: 6.0, // Moderate realistic braking
-    aggression: 0.5,
+    name: 'Amateur / Club Racer',
+    speedMultiplier: 0.89, // Balanced, competitive amateur pace
+    accelMultiplier: 0.86,
+    earlyBrakingDistance: 6.0,
+    aggression: 0.50,
     yieldDistance: 1.8,
     overtakeCapable: true,
-    defendApex: true, // Protects apex cleanly
+    defendApex: true, // Occasionally covers apex
     drafting: false,
-    overtakeCommitDistance: 30.0,
+    overtakeCommitDistance: 26.0,
+    lineVariance: 0.18,
+    steerWobble: 0.018,
+    yieldWhenPassed: 0.50, // Respects track limits and leaves 1 car width
     qualiMinTime: 75.0,
     qualiMaxTime: 78.8
   },
   HARD: {
-    speedMultiplier: 1.00, // 100% pace: elite F1 driver pace, requires pushing hard to win
-    earlyBrakingDistance: 1.5, // Late apex braking
-    aggression: 0.85,
-    yieldDistance: 1.4,
+    name: 'Pro / Esports Racer',
+    speedMultiplier: 0.97, // True F1 esports / pro pace
+    accelMultiplier: 0.96,
+    earlyBrakingDistance: 1.5, // Ultra-late braking
+    aggression: 0.82,
+    yieldDistance: 1.3,
     overtakeCapable: true,
-    defendApex: true, // Aggressively blocks passing lanes and defends apex
-    drafting: true, // Slipstream suction + DRS boost on straights
-    overtakeCommitDistance: 38.0,
+    defendApex: true, // Aggressively defends inside line
+    drafting: true, // Slingshots out of slipstream
+    overtakeCommitDistance: 34.0,
+    lineVariance: 0.05, // Laser-sharp consistency
+    steerWobble: 0.008, // Smooth esports inputs
+    yieldWhenPassed: 0.15, // Fierce wheel-to-wheel battles
     qualiMinTime: 72.2,
     qualiMaxTime: 74.5
   }
@@ -228,6 +243,11 @@ export class AICar {
     this.isDrafting = false;
     this.draftBonusSpeed = 0;
 
+    // Human driver personality & micro-jitter state
+    this.driverSeed = Math.random() * 100.0;
+    this.humanWobbleTimer = Math.random() * 10.0;
+    this.isBeingPassed = false;
+
     // Remote multiplayer Guest control state
     this.isRemoteGuest = false;
     this.remoteInputs = { throttle: 0, brake: 0, steer: 0 };
@@ -259,8 +279,10 @@ export class AICar {
     const up = new THREE.Vector3(0, 1, 0);
     const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
 
+    const trackWidth = (this.track && this.track.trackWidth) ? this.track.trackWidth : 16.0;
+    const sideSpacing = Math.min(3.0, trackWidth * 0.22);
     const sideSign = (slotIndex % 2 === 1) ? -1 : 1;
-    const sideDist = 3.2 * sideSign;
+    const sideDist = sideSpacing * sideSign;
     const spawnX = pt.x + normal.x * sideDist;
     const spawnY = (pt.y || 0) + 0.04;
     const spawnZ = pt.z + normal.z * sideDist;
@@ -286,6 +308,16 @@ export class AICar {
     this.visualCar.group.position.set(spawnX, spawnY, spawnZ);
     this.visualCar.group.visible = true;
     this.active = true;
+  }
+
+  getPosition() {
+    if (this.vehicle && this.vehicle.body) {
+      return this.vehicle.body.position;
+    }
+    if (this.visualCar && this.visualCar.group) {
+      return this.visualCar.group.position;
+    }
+    return { x: 0, y: 0, z: 0 };
   }
 
   hide() {
@@ -334,153 +366,151 @@ export class AICar {
     const pos = body.position;
     const config = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.MEDIUM;
 
-    // 1. Determine closest waypoint & lookahead target along racing line
+    // 1. Determine current waypoint along racing line from continuous trackProgress
     const wpCount = waypoints.length;
-    let closestWpIdx = 0;
-    let minDistsq = Infinity;
-    for (let i = 0; i < wpCount; i++) {
-      const wp = waypoints[i];
-      const dx = wp.position.x - pos.x;
-      const dz = wp.position.z - pos.z;
-      const dsq = dx * dx + dz * dz;
-      if (dsq < minDistsq) {
-        minDistsq = dsq;
-        closestWpIdx = i;
-      }
-    }
-
+    const progressClamped = ((this.trackProgress % 1.0) + 1.0) % 1.0;
+    const closestWpIdx = Math.min(wpCount - 1, Math.max(0, Math.floor(progressClamped * wpCount)));
     const currentWp = waypoints[closestWpIdx];
-    this.trackProgress = currentWp.t;
 
-    // Dynamic lookahead based on speed (pure pursuit)
-    const lookaheadMeters = Math.max(6.0, Math.min(26.0, this.currentSpeed * 0.28));
-    const stepCount = Math.max(2, Math.round(lookaheadMeters / 6.0));
+    // Dynamic lookahead based on speed and curvature (pure pursuit)
+    const isSharpCurve = Math.abs(currentWp.curvature) > 0.07;
+    const minLookahead = isSharpCurve ? 3.8 : 5.5;
+    const lookaheadMeters = Math.max(minLookahead, Math.min(26.0, this.currentSpeed * 0.26));
+    const trackLen = this.track.trackLength || 1850;
+    const segLen = trackLen / wpCount;
+    const stepCount = Math.max(1, Math.round(lookaheadMeters / Math.max(1.0, segLen)));
     const targetWpIdx = (closestWpIdx + stepCount) % wpCount;
     const targetWp = waypoints[targetWpIdx];
 
     // 2. Behavioral Adjustments: Active Overtaking, Defensive Line, and Drafting
     let desiredOffset = targetWp.racingLineOffset || 0;
-
-    // Vector and distances to player
-    const pPos = (typeof playerCarPos !== 'undefined' && playerCarPos) ? playerCarPos : { x: 0, y: 0, z: 0 };
-    const toPlayer = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
-    const distToPlayer = toPlayer.length();
     const forwardVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.visualCar.group.quaternion);
-    // Use track normal for lateral calculations (consistent reference frame)
     const trackNormal = targetWp.normal.clone();
-    const fwdDistToPlayer = toPlayer.dot(forwardVec);
-    const latDistToPlayer = toPlayer.dot(trackNormal);
 
-    let emergencyBrake = 0;
-
-    // A. Scan for Any Slower Car Ahead to Execute Active Overtaking
     let carAheadDist = Infinity;
     let carAheadLat = 0;
     let isCarAheadPlayer = false;
+    let carAheadSpeed = 999;
+
+    let carAlongside = false;
+    let alongsideLat = 0;
+    let isAlongsidePlayer = false;
 
     for (const other of allCars) {
       if (other === this) continue;
       const oPos = other.getPosition();
+
+      // Determine distance along track centerline progress
+      let otherT = other.trackProgress;
+      if (otherT === undefined || otherT === null) {
+        const info = this.track.getClosestTrackPoint(oPos.x, oPos.z);
+        otherT = info.t;
+      }
+
+      let tDiff = (otherT - this.trackProgress + 1.0) % 1.0;
+      if (tDiff > 0.5) tDiff -= 1.0;
+      const distAlongTrack = tDiff * trackLen;
+
       const dx = oPos.x - pos.x;
       const dz = oPos.z - pos.z;
-      const dFwd = dx * forwardVec.x + dz * forwardVec.z;
       const dLat = dx * trackNormal.x + dz * trackNormal.z;
 
+      // WHEEL-TO-WHEEL RADAR: Detect rivals alongside (within +/- 4.5m along track and within 3.4m laterally)
+      if (Math.abs(distAlongTrack) < 4.5 && Math.abs(dLat) < 3.4) {
+        carAlongside = true;
+        alongsideLat = dLat;
+        if (other.isPlayer) isAlongsidePlayer = true;
+      }
+
+      // If other car is strictly behind (distAlongTrack <= 0.2m), don't treat as obstacle ahead
+      if (distAlongTrack <= 0.2) continue;
+
       // Detect if someone is directly ahead in our corridor
-      if (dFwd > 1.2 && dFwd < config.overtakeCommitDistance && Math.abs(dLat) < 3.4) {
-        if (dFwd < carAheadDist) {
-          carAheadDist = dFwd;
+      if (distAlongTrack < config.overtakeCommitDistance && Math.abs(dLat) < 3.2) {
+        if (distAlongTrack < carAheadDist) {
+          carAheadDist = distAlongTrack;
           carAheadLat = dLat;
           isCarAheadPlayer = !!other.isPlayer;
+          carAheadSpeed = (other.currentSpeed !== undefined && other.currentSpeed !== null) ? other.currentSpeed : 45.0;
         }
       }
     }
 
-    // B. ACTIVE OVERTAKING EXECUTION (All Difficulties):
-    if (config.overtakeCapable && carAheadDist < config.overtakeCommitDistance) {
-      // Pick clear passing lane:
-      // targetWp.normal points to the track LEFT (+norm = left, -norm = right).
-      // If car ahead is on our right (carAheadLat >= 0), pass on the LEFT (+2.8m).
-      // If car ahead is on our left (carAheadLat < 0), pass on the RIGHT (-2.8m).
-      const passSide = carAheadLat >= 0 ? 2.8 : -2.8;
+    const trackWidth = (this.track && this.track.trackWidth) ? this.track.trackWidth : 16.0;
+    const maxSafeOffset = Math.max(1.8, trackWidth * 0.35);
+
+    // Active Human Racing Behavior & Space-Leaving:
+    if (carAlongside) {
+      // Car is alongside (wheel-to-wheel racing or being overtaken)!
+      // "Leave racing room": shift smoothly away from the rival to preserve a 2.0m-2.4m corridor
+      const roomSide = alongsideLat >= 0 ? -1 : 1; // If rival is to our right, shift left; if to our left, shift right
+      const roomOffset = Math.min(2.3, trackWidth * 0.22);
+      desiredOffset = roomSide * roomOffset;
+
+      if (isAlongsidePlayer && difficulty === DIFFICULTY_MODES.EASY) {
+        // Noob player lifts throttle so the user can easily and cleanly pass through
+        this.isBeingPassed = true;
+      } else {
+        this.isBeingPassed = false;
+      }
+    } else if (config.overtakeCapable && carAheadDist < config.overtakeCommitDistance) {
+      // Pick clear passing lane scaled to track width
+      const passOffset = Math.min(2.2, trackWidth * 0.22);
+      const passSide = carAheadLat >= 0 ? passOffset : -passOffset;
       desiredOffset = passSide;
 
-      // Drafting & Slipstream in HARD mode on straights
       if (config.drafting && isCarAheadPlayer && Math.abs(targetWp.curvature) < 0.006) {
         this.isDrafting = true;
-        this.draftBonusSpeed = 5.5; // +20 km/h aerodynamic boost
+        this.draftBonusSpeed = 4.0; // +15 km/h aerodynamic draft
       } else {
         this.isDrafting = false;
         this.draftBonusSpeed = 0;
       }
+      this.isBeingPassed = false;
     } else {
       this.isDrafting = false;
       this.draftBonusSpeed = 0;
+      this.isBeingPassed = false;
 
-      // C. DEFENSIVE LOGIC (When Player is Behind AI):
-      if (difficulty === DIFFICULTY_MODES.EASY) {
-        // EASY MODE: Zero defensive blocking!
-        // AI strictly holds its racing line, leaving passing lane wide open for player.
-        // Early braking in corners allows the player to easily dive inside and re-overtake.
-        desiredOffset = targetWp.racingLineOffset || 0;
-      } else if (difficulty === DIFFICULTY_MODES.MEDIUM) {
-        // MEDIUM MODE: Veers toward inside line to protect apex when player approaches from behind (< 20m)
-        if (fwdDistToPlayer < -1.0 && fwdDistToPlayer > -20.0 && Math.abs(latDistToPlayer) < 4.5) {
-          const insideSign = targetWp.insideApexSign || (targetWp.racingLineOffset < 0 ? -1 : 1);
-          desiredOffset = insideSign * 2.4;
-        }
-      } else if (difficulty === DIFFICULTY_MODES.HARD) {
-        // HARD MODE: Aggressively mirrors player's lateral line to block passing lanes into braking zones
-        if (fwdDistToPlayer < -0.5 && fwdDistToPlayer > -26.0) {
-          // Block toward the player's side (-latDistToPlayer aligns with normal)
-          const blockOffset = Math.max(-4.2, Math.min(4.2, -latDistToPlayer * 0.85));
-          desiredOffset = blockOffset;
+      // Pro Defense in Hard mode: protect inside apex into braking zones when rival is trailing closely
+      let defendOffset = 0;
+      if (config.defendApex && targetWp.insideApexSign !== 0 && targetWp.isBrakingZone) {
+        for (const other of allCars) {
+          if (other.isPlayer) {
+            const oPos = other.getPosition();
+            const pInfo = this.track.getClosestTrackPoint(oPos.x, oPos.z);
+            let pDiff = (this.trackProgress - pInfo.t + 1.0) % 1.0;
+            if (pDiff > 0.5) pDiff -= 1.0;
+            const pDistBehind = pDiff * trackLen;
+            if (pDistBehind > 0 && pDistBehind < 22.0) {
+              defendOffset = targetWp.insideApexSign * Math.min(2.3, trackWidth * 0.23);
+            }
+          }
         }
       }
+
+      // Default racing line with organic human line variance
+      const humanLineVariance = Math.sin(this.humanWobbleTimer * 0.35 + this.driverSeed) * (config.lineVariance || 0.15);
+      desiredOffset = defendOffset !== 0 ? defendOffset : ((targetWp.racingLineOffset || 0) + humanLineVariance);
     }
+
+    // Clamp desired offset within track boundaries
+    desiredOffset = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, desiredOffset));
 
     // Dynamic lateral lane transition
-    const laneSpeed = config.aggression > 0.5 ? 6.0 : 4.5;
+    const laneSpeed = config.aggression > 0.5 ? 5.5 : 4.0;
     this.targetOffset = desiredOffset;
     this.lateralOffset += (this.targetOffset - this.lateralOffset) * Math.min(1.0, dt * laneSpeed);
+    this.lateralOffset = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, this.lateralOffset));
 
-    // 3. Collision Avoidance & Proximity Repulsion
-    let obstacleAhead = false;
-    let obstacleDistance = Infinity;
-
-    for (const other of allCars) {
-      if (other === this) continue;
-      const oPos = other.getPosition();
-      const dx = oPos.x - pos.x;
-      const dz = oPos.z - pos.z;
-      const d = Math.sqrt(dx * dx + dz * dz);
-
-      // Gentle lateral repulsion if within 2.6m
-      if (d < 2.6) {
-        const nx = dx / (d || 1);
-        const nz = dz / (d || 1);
-        pos.x -= nx * (2.6 - d) * 0.3;
-        pos.z -= nz * (2.6 - d) * 0.3;
-      }
-
-      // Emergency braking: ONLY if an obstacle is immediately ahead in the SAME narrow corridor (< 1.8m)
-      const dFwd = dx * forwardVec.x + dz * forwardVec.z;
-      const dLat = dx * trackNormal.x + dz * trackNormal.z;
-
-      if (dFwd > 0.5 && dFwd < 7.5 && Math.abs(dLat) < 1.8) {
-        obstacleAhead = true;
-        if (dFwd < obstacleDistance) {
-          obstacleDistance = dFwd;
-        }
-      }
+    // 3. Proximity Pacing & Speed Management (NEVER stall to 0 km/h on track!)
+    let safeSpeedCap = Infinity;
+    if (carAheadDist < 6.0 && Math.abs(carAheadLat) < 1.6) {
+      // Directly stuck behind a car in the same lane: match their pace safely until passing lane opens
+      safeSpeedCap = Math.max(16.0, carAheadSpeed - 0.5);
     }
 
-    if (obstacleAhead) {
-      const prox = Math.max(0, 1.0 - (obstacleDistance / 7.5));
-      emergencyBrake = Math.max(emergencyBrake, prox * 0.75);
-    }
-
-    // 4. Pure Pursuit Steering
+    // 4. Pure Pursuit Steering with Human Micro-Corrections
     const targetPos = new THREE.Vector3()
       .copy(targetWp.centerPoint || targetWp.position)
       .addScaledVector(targetWp.normal, this.lateralOffset);
@@ -495,44 +525,76 @@ export class AICar {
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-    const rawSteer = Math.max(-1.0, Math.min(1.0, angleDiff * 2.8));
+    // Organic Human Steering Jitter (simulates subtle hand corrections on wheel/gamepad)
+    this.humanWobbleTimer += dt;
+    const wobbleFreq = (this.humanWobbleTimer * 7.5) + (this.driverSeed % 4.0);
+    const wobbleAmp = (config.steerWobble || 0.02) * (1.0 - (this.info.baseSkill || 0.9) * 0.35);
+    const humanSteerJitter = Math.sin(wobbleFreq) * wobbleAmp;
+
+    const steerGain = isSharpCurve ? 3.4 : 2.8;
+    const rawSteer = Math.max(-1.0, Math.min(1.0, (angleDiff * steerGain) + humanSteerJitter));
     this.currentSteer += (rawSteer - this.currentSteer) * Math.min(1.0, dt * 14.0);
 
-    // 5. Speed Calculation & Braking Zones
+    // 5. Speed Calculation & Balanced Power Matching (matches human player car capabilities)
     let baseTargetSpeed = targetWp.targetSpeed * config.speedMultiplier;
-    // Driver personal skill variance (top drivers like Verstappen run slightly sharper pace)
     baseTargetSpeed *= (0.98 + (this.info.baseSkill || 0.9) * 0.04);
     baseTargetSpeed += this.draftBonusSpeed;
 
-    // Early braking adjustments for Easy & Medium
-    if (targetWp.isBrakingZone && config.earlyBrakingDistance > 0) {
-      baseTargetSpeed *= Math.max(0.70, 1.0 - (config.earlyBrakingDistance / 100.0));
+    // If Noob AI is being passed by player, lift throttle so user passes easily
+    if (this.isBeingPassed) {
+      baseTargetSpeed *= 0.78;
     }
 
-    let throttle = 0;
-    let brake = emergencyBrake;
+    // Early braking adjustments for Easy & Medium in corners
+    if (targetWp.isBrakingZone && config.earlyBrakingDistance > 0) {
+      baseTargetSpeed *= Math.max(0.72, 1.0 - (config.earlyBrakingDistance / 100.0));
+    }
 
-    if (this.currentSpeed < baseTargetSpeed - 1.0 && brake < 0.2) {
+    // Apply safe speed cap if queuing behind another car
+    if (baseTargetSpeed > safeSpeedCap) {
+      baseTargetSpeed = safeSpeedCap;
+    }
+
+    // Finished cooldown pacing (80 km/h in-lap cool-down)
+    if (this.finished) {
+      baseTargetSpeed = Math.min(baseTargetSpeed, 22.0);
+    }
+
+    // Human player matched progressive power acceleration curve
+    const currentKmh = this.currentSpeed * 3.6;
+    let maxPowerAccel = 0;
+    if (currentKmh < 90) {
+      maxPowerAccel = 9.8 - (currentKmh / 90) * 2.2; // 9.8 down to 7.6 m/s²
+    } else if (currentKmh < 180) {
+      maxPowerAccel = 7.6 - ((currentKmh - 90) / 90) * 2.8; // 7.6 down to 4.8 m/s²
+    } else if (currentKmh < 260) {
+      maxPowerAccel = 4.8 - ((currentKmh - 180) / 80) * 2.4; // 4.8 down to 2.4 m/s²
+    } else {
+      maxPowerAccel = Math.max(0.6, 2.4 - ((currentKmh - 260) / 65) * 1.8); // 2.4 down to 0.6 m/s²
+    }
+
+    const accelMultiplier = config.accelMultiplier || (difficulty === DIFFICULTY_MODES.EASY ? 0.80 : (difficulty === DIFFICULTY_MODES.HARD ? 0.96 : 0.88));
+
+    let throttle = 0;
+    let brake = 0;
+
+    if (this.currentSpeed < baseTargetSpeed - 0.5) {
       throttle = 1.0;
       brake = 0.0;
-      // Progressive F1 acceleration curve perfectly matched to player vehicle power & drag physics
-      const speedFraction = Math.min(1.0, this.currentSpeed / 95.0); // 0 to 340 km/h
-      const realisticAccel = 15.2 - (speedFraction * 9.8); // 15.2 m/s² at launch down to 5.4 m/s² at top speed
-      this.currentSpeed += dt * realisticAccel;
-    } else if (this.currentSpeed > baseTargetSpeed + 1.5 || brake > 0.2) {
+      this.currentSpeed += dt * maxPowerAccel * accelMultiplier;
+    } else if (this.currentSpeed > baseTargetSpeed + 1.0) {
       throttle = 0.0;
-      const brakeForce = Math.min(1.0, Math.max(brake, (this.currentSpeed - baseTargetSpeed) / 10.0));
+      const brakeForce = Math.min(1.0, (this.currentSpeed - baseTargetSpeed) / 8.0);
       brake = brakeForce;
-      this.currentSpeed -= dt * (22.0 * brakeForce); // Progressive braking
+      this.currentSpeed -= dt * (18.0 * brakeForce);
     } else {
-      throttle = 0.5;
+      throttle = 0.4;
       brake = 0.0;
     }
 
     this.currentSpeed = Math.max(0, this.currentSpeed);
 
     // 6. Advance Physics Body & Visual Group
-    const trackLen = this.track.trackLength || 1850;
     const progressDelta = (this.currentSpeed * dt) / trackLen;
     this.trackProgress = (this.trackProgress + progressDelta) % 1.0;
 
@@ -620,8 +682,15 @@ export class AIGridManager {
   }
 
   applyGuestInput(inputs) {
-    if (this.aiCars && this.aiCars.length > 0) {
-      this.aiCars[0].remoteInputs = inputs;
+    if (this.aiCars && this.aiCars.length > 0 && inputs && typeof inputs === 'object') {
+      const throttle = Number(inputs.throttle);
+      const brake = Number(inputs.brake);
+      const steer = Number(inputs.steer);
+      this.aiCars[0].remoteInputs = {
+        throttle: Number.isFinite(throttle) ? Math.max(0, Math.min(1, throttle)) : 0,
+        brake: Number.isFinite(brake) ? Math.max(0, Math.min(1, brake)) : 0,
+        steer: Number.isFinite(steer) ? Math.max(-1, Math.min(1, steer)) : 0
+      };
     }
   }
 
@@ -776,6 +845,9 @@ export class AIGridManager {
   setTrack(newTrack) {
     this.track = newTrack;
     this.generateRacingLineWaypoints();
+    this.playerFinished = false;
+    this.playerFinishTime = null;
+    this.playerRaceDistance = 0;
     for (const ai of this.aiCars) {
       ai.track = newTrack;
       ai.waypoints = this.waypoints;
@@ -783,6 +855,9 @@ export class AIGridManager {
       ai.trackProgress = 0;
       ai.currentLap = 1;
       ai.totalDistance = 0;
+      ai.raceDistance = 0;
+      ai.finished = false;
+      ai.finishTime = null;
       ai.currentSpeed = 0;
       ai.hide();
     }
@@ -817,18 +892,21 @@ export class AIGridManager {
       let insideApexSign = 0;
       let targetSpeed = 86.0; // ~310 km/h default straight speed
 
+      const trackWidth = this.track?.trackWidth || 16.0;
+      const maxApexOffset = Math.min(2.8, trackWidth * 0.25);
+
       if (Math.abs(curvature) > 0.12) {
         insideApexSign = curvature > 0 ? -1 : 1;
-        offset = insideApexSign * 3.2; // Clip inside curb
+        offset = insideApexSign * maxApexOffset; // Clip inside curb safely within track width
         // Hairpin apexes (Monaco Fairmont Hairpin, etc.): safe cornering ~48 km/h
         targetSpeed = Math.max(13.5, 74.0 - Math.abs(curvature) * 300.0);
       } else if (Math.abs(curvature) > 0.06) {
         insideApexSign = curvature > 0 ? -1 : 1;
-        offset = insideApexSign * 2.4;
+        offset = insideApexSign * Math.min(2.2, maxApexOffset * 0.85);
         targetSpeed = Math.max(26.0, 80.0 - Math.abs(curvature) * 240.0);
       } else if (Math.abs(curvature) > 0.025) {
         insideApexSign = curvature > 0 ? -1 : 1;
-        offset = insideApexSign * 1.5;
+        offset = insideApexSign * Math.min(1.5, maxApexOffset * 0.6);
         targetSpeed = Math.max(42.0, 86.0 - Math.abs(curvature) * 180.0);
       }
 
@@ -963,8 +1041,10 @@ export class AIGridManager {
     const up = new THREE.Vector3(0, 1, 0);
     const normal = new THREE.Vector3().crossVectors(tgt, up).normalize();
 
+    const trackWidth = (this.track && this.track.trackWidth) ? this.track.trackWidth : 16.0;
+    const sideSpacing = Math.min(3.0, trackWidth * 0.22);
     const sideSign = (slotIndex % 2 === 1) ? -1 : 1;
-    const sideDist = 3.2 * sideSign;
+    const sideDist = sideSpacing * sideSign;
     const spawnX = pt.x + normal.x * sideDist;
     const spawnY = (pt.y || 0) + 0.04;
     const spawnZ = pt.z + normal.z * sideDist;
@@ -1071,10 +1151,16 @@ export class AIGridManager {
     for (const ai of this.aiCars) {
       if (ai.active) allCars.push(ai);
     }
-    // Add player proxy
+    // Add player proxy with track progress and speed (3D height and hintT aware)
+    const playerY = (playerPos && Number.isFinite(playerPos.y)) ? playerPos.y : null;
+    const pTrackInfo = this.track.getClosestTrackPoint(playerPos.x, playerPos.z, playerY, this.playerLastTrackT);
+    const pSpeed = playerVel ? Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z) : 0;
     const playerProxy = {
       getPosition: () => playerPos,
-      isPlayer: true
+      isPlayer: true,
+      trackProgress: pTrackInfo.t,
+      currentSpeed: pSpeed,
+      totalDistance: this.playerRaceDistance || 0
     };
     allCars.push(playerProxy);
 
@@ -1096,13 +1182,17 @@ export class AIGridManager {
     const trackLen = this.track.trackLength || 1850;
     const entries = [];
 
-    // 1. Calculate player continuous race distance
-    const pTrackInfo = this.track.getClosestTrackPoint(playerPos.x, playerPos.z);
+    // 1. Calculate player continuous race distance (3D height and hintT aware)
+    const curPlayerY = (playerPos && Number.isFinite(playerPos.y)) ? playerPos.y : null;
+    const pTrackInfo = this.track.getClosestTrackPoint(playerPos.x, playerPos.z, curPlayerY, this.playerLastTrackT);
     const currentT = pTrackInfo.t;
 
     // Continuous player distance based on true lap and spline progress
     const completedLaps = Math.max(0, (playerLap || 1) - 1);
-    const inLapDist = currentT * trackLen;
+    let inLapDist = currentT * trackLen;
+    if (completedLaps === 0 && currentT > 0.85) {
+      inLapDist = (currentT - 1.0) * trackLen;
+    }
     this.playerRaceDistance = (completedLaps * trackLen) + inLapDist;
     this.playerLastTrackT = currentT;
 
@@ -1176,27 +1266,30 @@ export class AIGridManager {
   }
 
   getRaceWinner(targetLaps = 3) {
+    const finishers = [];
+    if (this.playerFinished && this.playerFinishTime) {
+      finishers.push({
+        name: 'PLAYER',
+        code: 'YOU',
+        team: DRIVER_ROSTER[0].team || 'Ferrari',
+        finishTime: this.playerFinishTime,
+        isPlayer: true
+      });
+    }
     for (const ai of this.aiCars) {
-      if (ai.active && ai.finished) {
-        return {
+      if (ai.active && ai.finished && ai.finishTime) {
+        finishers.push({
           name: ai.info.name,
           code: ai.info.code,
           team: ai.info.team,
           finishTime: ai.finishTime,
           isPlayer: false
-        };
+        });
       }
     }
-    if (this.playerFinished) {
-      return {
-        name: 'PLAYER',
-        code: 'YOU',
-        team: this.playerTeam ? this.playerTeam.name : 'PLAYER',
-        finishTime: this.playerFinishTime,
-        isPlayer: true
-      };
-    }
-    return null;
+    if (finishers.length === 0) return null;
+    finishers.sort((a, b) => a.finishTime - b.finishTime);
+    return finishers[0];
   }
 
   getPlayerLivePosition() {
@@ -1220,4 +1313,6 @@ export class AIGridManager {
     return this.leaderboard;
   }
 }
+
+export const AIGrid = AIGridManager;
 

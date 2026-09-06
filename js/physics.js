@@ -92,7 +92,10 @@ export class PhysicsWorld {
 
     // Guarantee finite position and velocity (prevents NaN corruption)
     if (!Number.isFinite(body.position.x) || !Number.isFinite(body.position.y) || !Number.isFinite(body.position.z)) {
-      body.position.set(120, 0.04, -150);
+      const fallbackPt = (this.track && this.track.curve && typeof this.track.curve.getPointAt === 'function')
+        ? this.track.curve.getPointAt(0.0)
+        : { x: 0, y: 0.04, z: 0 };
+      body.position.set(fallbackPt.x || 0, (fallbackPt.y || 0) + 0.04, fallbackPt.z || 0);
     }
     if (!Number.isFinite(body.velocity.x) || !Number.isFinite(body.velocity.y) || !Number.isFinite(body.velocity.z)) {
       body.velocity.set(0, 0, 0);
@@ -115,9 +118,9 @@ export class PhysicsWorld {
     const lateralSpeed = Number.isFinite(rawLateral) ? rawLateral : 0; // m/s
     const speedKmh = Math.abs(forwardSpeed) * 3.6;
 
-    // Check if on track asphalt vs off-track grass/gravel
+    // Check if on track asphalt vs off-track grass/gravel (3D height aware)
     const trackInfo = this.track && typeof this.track.getClosestTrackPoint === 'function'
-      ? this.track.getClosestTrackPoint(body.position.x, body.position.z)
+      ? this.track.getClosestTrackPoint(body.position.x, body.position.z, body.position.y)
       : null;
     vehicle.isOnTrack = trackInfo
       ? (trackInfo.distance <= (this.track.trackWidth / 2))

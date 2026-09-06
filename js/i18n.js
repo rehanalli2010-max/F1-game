@@ -1013,6 +1013,8 @@ export const TRANSLATIONS = {
 
 export class I18nManager {
   constructor() {
+    this.translations = TRANSLATIONS;
+    this.supportedLanguages = SUPPORTED_LANGUAGES;
     this.autoDetectedLang = this.detectBrowserLocale();
     this.currentLanguage = this.detectUserLanguage();
     this.listeners = [];
@@ -1122,10 +1124,13 @@ export class I18nManager {
   t(key, params = {}, fallback = null) {
     const dict = TRANSLATIONS[this.currentLanguage] || TRANSLATIONS.en;
     let text = dict[key] || TRANSLATIONS.en[key] || fallback || key;
+    if (typeof text !== 'string') {
+      text = String(text ?? '');
+    }
 
     if (params && typeof params === 'object') {
       for (const [k, v] of Object.entries(params)) {
-        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+        text = text.replaceAll(`{${k}}`, String(v ?? ''));
       }
     }
 

@@ -1,1 +1,0 @@
-chrome.runtime.onInstalled.addListener((()=>{chrome.storage.local.set({filteringModeDetails:{basic:[],complete:["all-urls"],none:[],optimal:[]}})}));

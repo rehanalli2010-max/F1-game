@@ -305,15 +305,15 @@ export const TRACK_DATABASE = [
       new THREE.Vector3(-30, 0, 110),   // 6. S-Curves Turn 5 (Left)
       new THREE.Vector3(-45, 0, 80),    // 7. S-Curves Turn 6 (Right)
       new THREE.Vector3(-75, 4, 50),    // 8. Dunlop Sweeper Uphill Left
-      new THREE.Vector3(-105, 5, 10),   // 9. Degner 1 Fast 90° Right
-      new THREE.Vector3(-110, 2, -25),  // 10. Degner 2 Underpass
-      new THREE.Vector3(-80, 0, -60),   // 11. Cross-Under Straight
-      new THREE.Vector3(-105, 0, -100), // 12. Hairpin Braking Zone
-      new THREE.Vector3(-135, 0, -80),  // 13. Hairpin Tight Apex (60 km/h)
-      new THREE.Vector3(-135, 3, -30),  // 14. 200R Sweeper Uphill Right
-      new THREE.Vector3(-95, 6, 10),    // 15. Crossover Overpass Bridge (+6m elevation)
-      new THREE.Vector3(-45, 4, 15),    // 16. Overpass Exit
-      new THREE.Vector3(-10, 2, -40),   // 17. Spoon Curve Entry
+      new THREE.Vector3(-105, 3.0, 10), // 9. Degner 1 Fast 90° Right (Descent to Underpass)
+      new THREE.Vector3(-110, 0.0, -25),// 10. Degner 2 Underpass Floor
+      new THREE.Vector3(-80, 0.0, -60), // 11. Cross-Under Straight
+      new THREE.Vector3(-105, 0.0, -100),// 12. Hairpin Braking Zone
+      new THREE.Vector3(-135, 0.0, -80),// 13. Hairpin Tight Apex (60 km/h)
+      new THREE.Vector3(-135, 7.5, -30),// 14. 200R Sweeper Uphill Right (Bridge Approach, raised for underpass clearance)
+      new THREE.Vector3(-95, 10.2, 10), // 15. Crossover Overpass Bridge (+10.2m Elevation Crest, raised for underpass clearance)
+      new THREE.Vector3(-45, 8.0, 15),  // 16. Overpass Exit (Descent to Spoon, raised for underpass clearance)
+      new THREE.Vector3(-10, 2.0, -40), // 17. Spoon Curve Entry
       new THREE.Vector3(15, 0, -105),   // 18. Spoon Curve Double-Left
       new THREE.Vector3(45, 0, -170),   // 19. Back Straight Flat-Out (310 km/h)
       new THREE.Vector3(80, 0, -210),   // 20. 130R Supersonic Left

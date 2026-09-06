@@ -1,7 +1,0 @@
-2026/09/05-09:55:38.750 12ac Reusing MANIFEST D:\CODE\F1 Game\scratch\edge_profile_diag\Default\IndexedDB\chrome-extension_pdffkfellgipmhklpdmokmckkkfcopbh_0.indexeddb.leveldb/MANIFEST-000001
-2026/09/05-09:55:38.751 12ac Recovering log #4
-2026/09/05-09:55:38.785 12ac Reusing old log D:\CODE\F1 Game\scratch\edge_profile_diag\Default\IndexedDB\chrome-extension_pdffkfellgipmhklpdmokmckkkfcopbh_0.indexeddb.leveldb/000004.log 
-2026/09/05-09:55:38.861 2988 Level-0 table #8: started
-2026/09/05-09:55:38.923 2988 Level-0 table #8: 227153 bytes OK
-2026/09/05-09:55:38.973 2988 Delete type=0 #4
-2026/09/05-09:55:38.976 2988 Manual compaction at level-0 from '\x00\x04\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x05\x00\x00\x00' @ 0 : 0; will stop at (end)

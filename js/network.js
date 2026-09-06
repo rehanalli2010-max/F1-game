@@ -199,7 +199,8 @@ export class NetworkManager {
   }
 
   handleIncomingPacket(packet) {
-    if (!packet || !packet.type) return;
+    if (!packet || typeof packet !== 'object' || typeof packet.type !== 'string') return;
+    if (!NETWORK_PACKET_TYPES[packet.type]) return;
 
     switch (packet.type) {
       case NETWORK_PACKET_TYPES.HELLO:

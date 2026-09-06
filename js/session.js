@@ -108,12 +108,83 @@ export class SessionManager {
     this.clearAllTimers();
     this.timing.reset();
 
+    if (this.timing) {
+      this.timing.onLapCompleteCallback = (lapResult) => this.handleLapComplete(lapResult);
+    }
+  }
+
+  setTrack(track) {
+    this.track = track;
+    if (this.track && this.track.trackData && this.track.trackData.laps) {
+      this.raceLapsTotal = this.track.trackData.laps;
+    }
+  }
+
+  setAIGridManager(aiGridManager) {
+    this.aiGrid = aiGridManager;
+    if (this.aiGrid) {
+      this.aiGrid.setDifficulty(this.difficulty);
+    }
+  }
+
+  setDifficulty(diffMode) {
+    this.difficulty = diffMode;
+    if (this.aiGrid) {
+      this.aiGrid.setDifficulty(diffMode);
+    }
+  }
+
+  setRaceLapsTotal(laps) {
+    this.raceLapsTotal = Math.max(1, Math.min(20, laps));
+  }
+
+  setMultiplayerMode(isMP, isHost = false) {
+    this.isMultiplayer = isMP;
+    this.isHost = isHost;
+    if (this.aiGrid) {
+      this.aiGrid.setGuestRemote(isMP);
+    }
+  }
+
+  initSession(mode, playerVehicle, playerCar, qualifiedGrid = null, skipAd = false) {
+    // STRICT AD POLICY: Mock ads are entirely disabled in Multiplayer mode!
+    if (this.isMultiplayer) {
+      skipAd = true;
+    }
+
+    // If starting race and mock ad callback exists (single player only)
+    if (mode === SESSION_TYPES.RACE && !skipAd && this.ui.showMockAd) {
+      this.ui.showMockAd({
+        title: 'OFFICIAL BROADCAST SPONSOR',
+        sponsor: 'ROLEX',
+        subtitle: 'Formula 1 Grand Prix Starting Grid Live Broadcast',
+        buttonText: 'Skip to Starting Grid',
+        duration: 3000,
+        onFinish: () => {
+          this.executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid);
+        }
+      });
+      return;
+    }
+
+    this.executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid);
+  }
+
+  executeSessionInit(mode, playerVehicle, playerCar, qualifiedGrid = null) {
+    this.currentMode = mode;
+    this.clearAllTimers();
+    this.timing.reset();
+
     // Notify UI
     if (this.ui.onSessionChange) {
       this.ui.onSessionChange(this.currentMode);
     }
 
     if (mode === SESSION_TYPES.PRACTICE) {
+      if (this.ui && this.ui.setStartLightsVisible) {
+        this.ui.setStartLightsVisible(false);
+        this.ui.updateGantryBulbs(0);
+      }
       this.startPracticeSession(playerVehicle, playerCar);
     } else if (mode === SESSION_TYPES.RACE) {
       this.startRaceSession(playerVehicle, playerCar, qualifiedGrid);
@@ -125,6 +196,15 @@ export class SessionManager {
      -------------------------------------------------------------------------- */
   startPracticeSession(playerVehicle, playerCar) {
     this.raceState = 'PRACTICE';
+    // Ensure starting lights gantry is completely hidden and reset in Practice mode
+    if (this.ui && this.ui.setStartLightsVisible) {
+      this.ui.setStartLightsVisible(false);
+      this.ui.updateGantryBulbs(0);
+    }
+    if (this.track && typeof this.track.setGantryLights === 'function') {
+      this.track.setGantryLights(0);
+    }
+
     // Spawn player at start line stationary
     const startPt = this.track.curve.getPointAt(0.0);
     const tgt = this.track.curve.getTangentAt(0.0).normalize();
@@ -191,6 +271,10 @@ export class SessionManager {
     this.track.setGantryLights(0);
 
     const scheduleNextLight = () => {
+      if (this.currentMode !== SESSION_TYPES.RACE) {
+        this.clearAllTimers();
+        return;
+      }
       this.gantryStep++;
       if (this.gantryStep <= 5) {
         if (this.ui.updateGantryBulbs) this.ui.updateGantryBulbs(this.gantryStep);
@@ -206,6 +290,10 @@ export class SessionManager {
         // Random pause between 0.4s and 1.4s before LIGHTS OUT
         const randomHold = 400 + Math.random() * 1000;
         this.gantryTimer = setTimeout(() => {
+          if (this.currentMode !== SESSION_TYPES.RACE) {
+            this.clearAllTimers();
+            return;
+          }
           // LIGHTS OUT AND AWAY WE GO!
           this.raceState = 'RACING';
           this.raceStartTime = performance.now();
@@ -223,7 +311,9 @@ export class SessionManager {
             this.ui.showAlert('LIGHTS OUT AND AWAY WE GO!', 2500, 'alert-flying-lap');
           }
           if (this.ui.setStartLightsVisible) {
-            setTimeout(() => this.ui.setStartLightsVisible(false), 800);
+            this._hideLightsTimer = setTimeout(() => {
+              if (this.ui.setStartLightsVisible) this.ui.setStartLightsVisible(false);
+            }, 800);
           }
           if (this.ui.updateSessionBadge) {
             this.ui.updateSessionBadge('RACE', `LAP 1/${this.raceLapsTotal}`);
@@ -436,6 +526,14 @@ if (this.aiGrid) {
       clearTimeout(this.gantryTimer);
       this.gantryTimer = null;
     }
+    if (this._hideLightsTimer) {
+      clearTimeout(this._hideLightsTimer);
+      this._hideLightsTimer = null;
+    }
+    if (this.ui && this.ui.setStartLightsVisible) {
+      this.ui.setStartLightsVisible(false);
+      this.ui.updateGantryBulbs(0);
+    }
   }
 
   clearAllTimers() {
@@ -446,6 +544,16 @@ if (this.aiGrid) {
     if (this.finishTimeout) {
       clearTimeout(this.finishTimeout);
       this.finishTimeout = null;
+    }
+    if (this._hideLightsTimer) {
+      clearTimeout(this._hideLightsTimer);
+      this._hideLightsTimer = null;
+    }
+    if (this.currentMode === SESSION_TYPES.PRACTICE) {
+      if (this.ui && this.ui.setStartLightsVisible) {
+        this.ui.setStartLightsVisible(false);
+        this.ui.updateGantryBulbs(0);
+      }
     }
     if (this.track && typeof this.track.setGantryLights === 'function') {
       this.track.setGantryLights(0);

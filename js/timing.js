@@ -87,8 +87,9 @@ export class TimingSystem {
     const now = performance.now();
     this.currentLapTime = (now - this.lapStartTime) / 1000;
 
-    // 1. Check car position against track spline
-    const trackInfo = this.track.getClosestTrackPoint(carPos.x, carPos.z);
+    // 1. Check car position against track spline (supports 3D crossover bridge & progress continuity)
+    const carY = (carPos && Number.isFinite(carPos.y)) ? carPos.y : null;
+    const trackInfo = this.track.getClosestTrackPoint(carPos.x, carPos.z, carY, this.prevProgress);
     const progress = trackInfo.t; // 0 to 1
 
     // 2. Anti-Cheat: Reverse Driving Detection
@@ -240,11 +241,19 @@ export class TimingSystem {
     this.sectorTimes = [null, null, null];
   }
 
+  formatTime(seconds) {
+    return TimingSystem.formatTime(seconds);
+  }
+
+  formatDelta(deltaSec) {
+    return TimingSystem.formatDelta(deltaSec);
+  }
+
   /**
    * Format seconds to standard F1 timing: MM:SS.mmm
    */
   static formatTime(seconds) {
-    if (seconds === null || seconds === undefined || isNaN(seconds)) return '--:--.---';
+    if (seconds === null || seconds === undefined || isNaN(seconds) || seconds < 0) return '--:--.---';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 1000);
@@ -257,11 +266,11 @@ export class TimingSystem {
   }
 
   /**
-   * Format delta time with +/- sign: +0.284 or -0.192
+   * Format delta time with +/- sign: +0.284s or -0.192s
    */
   static formatDelta(deltaSec) {
-    if (deltaSec === null || isNaN(deltaSec)) return '+0.000';
-    const sign = deltaSec > 0 ? '+' : '-';
+    if (deltaSec === null || deltaSec === undefined || isNaN(deltaSec)) return '+0.000s';
+    const sign = deltaSec > 0 ? '+' : (deltaSec < 0 ? '-' : '+');
     const abs = Math.abs(deltaSec);
     return `${sign}${abs.toFixed(3)}s`;
   }

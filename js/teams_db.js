@@ -167,5 +167,10 @@ export const F1_TEAMS = [
 ];
 
 export function getTeamById(id) {
-  return F1_TEAMS.find(t => t.id === id) || F1_TEAMS[0];
+  if (!id) return F1_TEAMS[0];
+  const cleanId = String(id).toLowerCase().trim();
+  if (cleanId === 'racingbulls' || cleanId === 'racing_bulls' || cleanId === 'vcarb') {
+    return F1_TEAMS.find(t => t.id === 'rb') || F1_TEAMS[0];
+  }
+  return F1_TEAMS.find(t => t.id === cleanId) || F1_TEAMS[0];
 }

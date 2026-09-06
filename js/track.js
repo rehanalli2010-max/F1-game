@@ -671,6 +671,15 @@ export class Track {
   }
 
   getClosestTrackPoint(x, z) {
+    if (!this.sampledPoints || this.sampledPoints.length === 0) {
+      return {
+        point: new THREE.Vector3(x, 0, z),
+        tangent: new THREE.Vector3(0, 0, 1),
+        t: 0,
+        distance: 0,
+        index: 0
+      };
+    }
     let minDistanceSq = Infinity;
     let closestIndex = 0;
 
@@ -1161,9 +1170,18 @@ export class Track {
    * Find closest point, tangent, distance, and progress t along track centerline
    */
   getClosestTrackPoint(x, z) {
+    const pts = this.sampledPoints;
+    if (!pts || pts.length === 0) {
+      return {
+        point: new THREE.Vector3(x, 0, z),
+        tangent: new THREE.Vector3(0, 0, 1),
+        index: 0,
+        t: 0,
+        distance: 0
+      };
+    }
     let minDistSq = Infinity;
     let bestIdx = 0;
-    const pts = this.sampledPoints;
     const len = pts.length;
     for (let i = 0; i < len; i++) {
       const dx = pts[i].x - x;
