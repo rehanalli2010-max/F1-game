@@ -1,0 +1,91 @@
+{
+  "trackId": "suzuka",
+  "trackName": "Suzuka GP",
+  "trackLength": 1118.8,
+  "halfW": 7.75,
+  "grandstandsInTrack": [],
+  "grandstandSpecsCount": 6,
+  "allGrandstandsSummary": [
+    {
+      "idx": 0,
+      "sponsor": "FORMULA 1",
+      "t": 0.015,
+      "side": -1,
+      "dist": 24,
+      "minTrackDist": 18.43,
+      "clearanceFromTrackEdge": 10.68
+    },
+    {
+      "idx": 1,
+      "sponsor": "HONDA",
+      "t": 0.09,
+      "side": -1,
+      "dist": 25,
+      "minTrackDist": 23,
+      "clearanceFromTrackEdge": 15.25
+    },
+    {
+      "idx": 2,
+      "sponsor": "ROLEX",
+      "t": 0.22,
+      "side": -1,
+      "dist": 25,
+      "minTrackDist": 21.48,
+      "clearanceFromTrackEdge": 13.73
+    },
+    {
+      "idx": 3,
+      "sponsor": "PIRELLI",
+      "t": 0.54,
+      "side": 1,
+      "dist": 26,
+      "minTrackDist": 24.01,
+      "clearanceFromTrackEdge": 16.26
+    },
+    {
+      "idx": 4,
+      "sponsor": "DHL",
+      "t": 0.88,
+      "side": -1,
+      "dist": 25,
+      "minTrackDist": 23.02,
+      "clearanceFromTrackEdge": 15.27
+    },
+    {
+      "idx": 5,
+      "sponsor": "QATAR AIRWAYS",
+      "t": 0.965,
+      "side": -1,
+      "dist": 24,
+      "minTrackDist": 22.01,
+      "clearanceFromTrackEdge": 14.26
+    }
+  ],
+  "totalTreesFound": 90,
+  "treesInTrack": [],
+  "wrongWayTriggers": [],
+  "crossoverClearance": {
+    "underpassPoint": {
+      "x": -107.6,
+      "y": 2.21,
+      "z": 0.4
+    },
+    "overpassPoint": {
+      "x": -107.2,
+      "y": 6.6,
+      "z": -0.2
+    },
+    "horizontalSeparation": 0.66,
+    "verticalClearanceMeters": 4.4
+  },
+  "lapEvents": {
+    "sector1Passed": true,
+    "sector1Time": 75.00059999999962,
+    "sector2Passed": true,
+    "sector2Time": 0.000199999999253464,
+    "sector3Passed": true,
+    "lapCompleted": true,
+    "finalLapTime": 75.00179999999888,
+    "lapValid": true
+  }
+}

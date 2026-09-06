@@ -1,0 +1,46 @@
+{
+  "trackId": "suzuka",
+  "trackName": "Suzuka GP",
+  "terrainPenetrations": [],
+  "meshPenetrations": 0,
+  "bridgeArchitecture": {
+    "bridgeMeshFound": true,
+    "bridgeMeshVertices": 354,
+    "girdersCount": 84,
+    "piersCount": 4,
+    "bannerFound": false
+  },
+  "floatingObjectsNearBridge": [
+    {
+      "type": "PlaneGeometry",
+      "pos": {
+        "x": -97.9,
+        "y": 7.15,
+        "z": -7.1
+      }
+    },
+    {
+      "type": "PointLight",
+      "pos": {
+        "x": -106.9,
+        "y": 6.01,
+        "z": 3.8
+      }
+    },
+    {
+      "type": "PointLight",
+      "pos": {
+        "x": -108.3,
+        "y": 6.01,
+        "z": -3
+      }
+    }
+  ],
+  "fullLapResult": {
+    "wrongWayCount": 0,
+    "sector1Passed": false,
+    "sector2Passed": false,
+    "lapCompleted": true,
+    "finalLapTime": 75.00260000000009
+  }
+}

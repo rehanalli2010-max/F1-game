@@ -1,0 +1,1346 @@
+{
+  "monaco": {
+    "trackId": "monaco",
+    "theme": "MARINA_HARBOR",
+    "grandstands": [
+      {
+        "idx": 0,
+        "sponsor": "ROLEX",
+        "t": 0.1,
+        "side": -1,
+        "dist": 14,
+        "length": 48,
+        "depth": 8,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 109.3,
+            "worldZ": -45.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 104.1,
+            "worldZ": -21.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 104.5,
+            "worldZ": -69.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 114.1,
+            "worldZ": -21.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 114.5,
+            "worldZ": -69.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 1,
+        "sponsor": "MONTE CARLO",
+        "t": 0.44,
+        "side": 1,
+        "dist": 16.5,
+        "length": 32,
+        "depth": 8,
+        "trackY": 9.82,
+        "gsBaseY": 9.82,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -21.1,
+            "worldZ": 150.3,
+            "gsBaseY": 9.82,
+            "terrY": 9.57,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -8.2,
+            "worldZ": 161,
+            "gsBaseY": 9.82,
+            "terrY": 9.57,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -37.8,
+            "worldZ": 148.8,
+            "gsBaseY": 9.82,
+            "terrY": 9.57,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -4.4,
+            "worldZ": 151.8,
+            "gsBaseY": 9.82,
+            "terrY": 9.57,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -34,
+            "worldZ": 139.6,
+            "gsBaseY": 9.82,
+            "terrY": 9.57,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 2,
+        "sponsor": "TAG HEUER",
+        "t": 0.82,
+        "side": -1,
+        "dist": 14.5,
+        "length": 56,
+        "depth": 8,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.15,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -20,
+            "worldZ": -84.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -1.7,
+            "worldZ": -106,
+            "gsBaseY": 0,
+            "terrY": -0.15,
+            "gap": 0.15
+          },
+          {
+            "corner": "front-right",
+            "worldX": -29.5,
+            "worldZ": -57.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -10.4,
+            "worldZ": -111,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -38.2,
+            "worldZ": -62.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 3,
+        "sponsor": "PIRELLI",
+        "t": 0.9,
+        "side": -1,
+        "dist": 14,
+        "length": 50,
+        "depth": 8,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 11.5,
+            "worldZ": -146.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 31.2,
+            "worldZ": -162.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -0.5,
+            "worldZ": -124.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 23.5,
+            "worldZ": -169,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -8.2,
+            "worldZ": -130.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 4,
+        "sponsor": "FORMULA 1",
+        "t": 0.98,
+        "side": -1,
+        "dist": 14,
+        "length": 46,
+        "depth": 8,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 95.4,
+            "worldZ": -157.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 107.7,
+            "worldZ": -137.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 75.8,
+            "worldZ": -170.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 114.9,
+            "worldZ": -144.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 83,
+            "worldZ": -177.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      }
+    ]
+  },
+  "spa": {
+    "trackId": "spa",
+    "theme": "FOREST_TERRAIN",
+    "grandstands": [
+      {
+        "idx": 0,
+        "sponsor": "FORMULA 1",
+        "t": 0.012,
+        "side": -1,
+        "dist": 24.5,
+        "length": 85,
+        "depth": 14,
+        "trackY": 1.72,
+        "gsBaseY": 1.72,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 113.1,
+            "worldZ": -124.5,
+            "gsBaseY": 1.72,
+            "terrY": 1.47,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 105.1,
+            "worldZ": -82,
+            "gsBaseY": 1.72,
+            "terrY": 1.47,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 105,
+            "worldZ": -167,
+            "gsBaseY": 1.72,
+            "terrY": 1.47,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 121.1,
+            "worldZ": -82,
+            "gsBaseY": 1.72,
+            "terrY": 1.47,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 121,
+            "worldZ": -167,
+            "gsBaseY": 1.72,
+            "terrY": 1.47,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 1,
+        "sponsor": "ROLEX",
+        "t": 0.22,
+        "side": -1,
+        "dist": 26.5,
+        "length": 80,
+        "depth": 14,
+        "trackY": -3.82,
+        "gsBaseY": -3.82,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 43.3,
+            "worldZ": 140.7,
+            "gsBaseY": -3.82,
+            "terrY": -4.07,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 12.4,
+            "worldZ": 167.4,
+            "gsBaseY": -3.82,
+            "terrY": -4.07,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 61.4,
+            "worldZ": 104.2,
+            "gsBaseY": -3.82,
+            "terrY": -4.07,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 25.1,
+            "worldZ": 177.2,
+            "gsBaseY": -3.82,
+            "terrY": -4.07,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 74.1,
+            "worldZ": 114,
+            "gsBaseY": -3.82,
+            "terrY": -4.07,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 2,
+        "sponsor": "PIRELLI",
+        "t": 0.42,
+        "side": -1,
+        "dist": 26.5,
+        "length": 75,
+        "depth": 14,
+        "trackY": 22.91,
+        "gsBaseY": 22.91,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -144.8,
+            "worldZ": 340.3,
+            "gsBaseY": 22.91,
+            "terrY": 22.66,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -182.8,
+            "worldZ": 345.7,
+            "gsBaseY": 22.91,
+            "terrY": 22.66,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -112.3,
+            "worldZ": 320,
+            "gsBaseY": 22.91,
+            "terrY": 22.66,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -177.3,
+            "worldZ": 360.7,
+            "gsBaseY": 22.91,
+            "terrY": 22.66,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -106.8,
+            "worldZ": 335,
+            "gsBaseY": 22.91,
+            "terrY": 22.66,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 3,
+        "sponsor": "QATAR AIRWAYS",
+        "t": 0.55,
+        "side": -1,
+        "dist": 26.5,
+        "length": 70,
+        "depth": 14,
+        "trackY": 6.74,
+        "gsBaseY": 6.74,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -217.5,
+            "worldZ": 167.8,
+            "gsBaseY": 6.74,
+            "terrY": 6.49,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -217.7,
+            "worldZ": 131.9,
+            "gsBaseY": 6.74,
+            "terrY": 6.49,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -201.7,
+            "worldZ": 200.1,
+            "gsBaseY": 6.74,
+            "terrY": 6.49,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -233.3,
+            "worldZ": 135.6,
+            "gsBaseY": 6.74,
+            "terrY": 6.49,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -217.2,
+            "worldZ": 203.7,
+            "gsBaseY": 6.74,
+            "terrY": 6.49,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 4,
+        "sponsor": "ARAMCO",
+        "t": 0.65,
+        "side": -1,
+        "dist": 27.5,
+        "length": 85,
+        "depth": 14,
+        "trackY": -0.64,
+        "gsBaseY": -0.64,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -247.5,
+            "worldZ": 27.8,
+            "gsBaseY": -0.64,
+            "terrY": -0.89,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -232.6,
+            "worldZ": -12.8,
+            "gsBaseY": -0.64,
+            "terrY": -0.89,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -246.6,
+            "worldZ": 71,
+            "gsBaseY": -0.64,
+            "terrY": -0.89,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -248.4,
+            "worldZ": -15.4,
+            "gsBaseY": -0.64,
+            "terrY": -0.89,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -262.4,
+            "worldZ": 68.4,
+            "gsBaseY": -0.64,
+            "terrY": -0.89,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 5,
+        "sponsor": "DHL",
+        "t": 0.965,
+        "side": -1,
+        "dist": 25.5,
+        "length": 75,
+        "depth": 14,
+        "trackY": 1.13,
+        "gsBaseY": 1.13,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 86,
+            "worldZ": -199.4,
+            "gsBaseY": 1.13,
+            "terrY": 0.88,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 100.5,
+            "worldZ": -163.9,
+            "gsBaseY": 1.13,
+            "terrY": 0.88,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 58.3,
+            "worldZ": -225.9,
+            "gsBaseY": 1.13,
+            "terrY": 0.88,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 113.7,
+            "worldZ": -172.9,
+            "gsBaseY": 1.13,
+            "terrY": 0.88,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 71.5,
+            "worldZ": -234.9,
+            "gsBaseY": 1.13,
+            "terrY": 0.88,
+            "gap": 0.25
+          }
+        ]
+      }
+    ]
+  },
+  "monza": {
+    "trackId": "monza",
+    "theme": "PARK_GRASS",
+    "grandstands": [
+      {
+        "idx": 0,
+        "sponsor": "FORMULA 1",
+        "t": 0.008,
+        "side": -1,
+        "dist": 24.5,
+        "length": 90,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 152.9,
+            "worldZ": -151.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 146.1,
+            "worldZ": -106.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 143.8,
+            "worldZ": -196.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 162.1,
+            "worldZ": -106.9,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 159.8,
+            "worldZ": -196.9,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 1,
+        "sponsor": "PIRELLI",
+        "t": 0.045,
+        "side": -1,
+        "dist": 24.5,
+        "length": 90,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 153.2,
+            "worldZ": -106.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 145.1,
+            "worldZ": -61.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 145.3,
+            "worldZ": -151.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 161.1,
+            "worldZ": -61.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 161.3,
+            "worldZ": -151.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 2,
+        "sponsor": "ROLEX",
+        "t": 0.125,
+        "side": -1,
+        "dist": 26.5,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 154.6,
+            "worldZ": -10.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 146.3,
+            "worldZ": 26.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 146.8,
+            "worldZ": -48.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 162.3,
+            "worldZ": 26.9,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 162.8,
+            "worldZ": -48.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 3,
+        "sponsor": "QATAR AIRWAYS",
+        "t": 0.72,
+        "side": -1,
+        "dist": 26.5,
+        "length": 70,
+        "depth": 13,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -151.7,
+            "worldZ": -99.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -131.3,
+            "worldZ": -129,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -158.4,
+            "worldZ": -64.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -145.1,
+            "worldZ": -134.9,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -172.2,
+            "worldZ": -70.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 4,
+        "sponsor": "HEINEKEN",
+        "t": 0.92,
+        "side": -1,
+        "dist": 27.5,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 66.5,
+            "worldZ": -256,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 99.6,
+            "worldZ": -236.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 28.4,
+            "worldZ": -260.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 104.6,
+            "worldZ": -251.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 33.5,
+            "worldZ": -275.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 5,
+        "sponsor": "DHL",
+        "t": 0.965,
+        "side": -1,
+        "dist": 25.5,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 128.7,
+            "worldZ": -216.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 144.1,
+            "worldZ": -181.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 100.4,
+            "worldZ": -242.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 157.1,
+            "worldZ": -190.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 113.4,
+            "worldZ": -251.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      }
+    ]
+  },
+  "silverstone": {
+    "trackId": "silverstone",
+    "theme": "COUNTRY_GRASS",
+    "grandstands": [
+      {
+        "idx": 0,
+        "sponsor": "FORMULA 1",
+        "t": 0.975,
+        "side": -1,
+        "dist": 26,
+        "length": 90,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 174.1,
+            "worldZ": -57.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 166.1,
+            "worldZ": -12.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 166.1,
+            "worldZ": -102.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 182.1,
+            "worldZ": -12.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 182.1,
+            "worldZ": -102.2,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 1,
+        "sponsor": "PIRELLI",
+        "t": 0.05,
+        "side": -1,
+        "dist": 27,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 188,
+            "worldZ": 104.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 188.3,
+            "worldZ": 143,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 172.1,
+            "worldZ": 69.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 203.9,
+            "worldZ": 139.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 187.8,
+            "worldZ": 66.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 2,
+        "sponsor": "ROLEX",
+        "t": 0.25,
+        "side": 1,
+        "dist": 27,
+        "length": 80,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -43.9,
+            "worldZ": -31,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -23.7,
+            "worldZ": 4.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -76.1,
+            "worldZ": -56,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -11.6,
+            "worldZ": -6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -64.1,
+            "worldZ": -66.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 3,
+        "sponsor": "BRITISH GP",
+        "t": 0.38,
+        "side": -1,
+        "dist": 27,
+        "length": 80,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -205.7,
+            "worldZ": -65.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -206.7,
+            "worldZ": -24.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -220.5,
+            "worldZ": -103.4,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -191,
+            "worldZ": -27.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -204.8,
+            "worldZ": -106.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 4,
+        "sponsor": "ARAMCO",
+        "t": 0.505,
+        "side": -1,
+        "dist": 28,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": -64.6,
+            "worldZ": 158.7,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": -46.6,
+            "worldZ": 192.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": -94.8,
+            "worldZ": 135.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": -34.4,
+            "worldZ": 182.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": -82.6,
+            "worldZ": 124.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 5,
+        "sponsor": "QATAR AIRWAYS",
+        "t": 0.61,
+        "side": 1,
+        "dist": 28,
+        "length": 80,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 133.5,
+            "worldZ": 301.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 94.3,
+            "worldZ": 312.6,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 165.1,
+            "worldZ": 275.3,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 101.8,
+            "worldZ": 326.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 172.6,
+            "worldZ": 289.5,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      },
+      {
+        "idx": 6,
+        "sponsor": "DHL",
+        "t": 0.825,
+        "side": 1,
+        "dist": 28,
+        "length": 75,
+        "depth": 14,
+        "trackY": 0,
+        "gsBaseY": 0,
+        "maxGap": 0.25,
+        "minGap": 0.25,
+        "corners": [
+          {
+            "corner": "center",
+            "worldX": 305.4,
+            "worldZ": -173,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-left",
+            "worldX": 309.4,
+            "worldZ": -134.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "front-right",
+            "worldX": 286.2,
+            "worldZ": -206.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-left",
+            "worldX": 324.7,
+            "worldZ": -139.8,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          },
+          {
+            "corner": "back-right",
+            "worldX": 301.4,
+            "worldZ": -211.1,
+            "gsBaseY": 0,
+            "terrY": -0.25,
+            "gap": 0.25
+          }
+        ]
+      }
+    ]
+  }
+}

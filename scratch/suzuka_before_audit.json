@@ -1,0 +1,181 @@
+{
+  "trackId": "suzuka",
+  "trackLength": 1118.6897926078052,
+  "halfW": 7.75,
+  "grandstandsInTrack": [
+    {
+      "idx": 3,
+      "sponsor": "ARAMCO",
+      "t": 0.5,
+      "side": -1,
+      "dist": 26,
+      "minTrackDist": 0.27,
+      "worstT": 0.55,
+      "encroachment": 7.48
+    }
+  ],
+  "treesInTrack": [
+    {
+      "pos": {
+        "x": -89.8,
+        "y": 0.1,
+        "z": -62.8
+      },
+      "distToTrack": 8.25,
+      "closestT": 0.483,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": -126.3,
+        "y": 0,
+        "z": -74.9
+      },
+      "distToTrack": 9.56,
+      "closestT": 0.555,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": -105.4,
+        "y": 4.9,
+        "z": -12.4
+      },
+      "distToTrack": 4.28,
+      "closestT": 0.423,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": -100.1,
+        "y": 5.3,
+        "z": -7.4
+      },
+      "distToTrack": 8.79,
+      "closestT": 0.418,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": -58.3,
+        "y": 3.9,
+        "z": 6.7
+      },
+      "distToTrack": 9.21,
+      "closestT": 0.68,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": -134.5,
+        "y": 0.5,
+        "z": -53.6
+      },
+      "distToTrack": 2.24,
+      "closestT": 0.575,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": -99,
+        "y": 0.2,
+        "z": -49
+      },
+      "distToTrack": 7.82,
+      "closestT": 0.457,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": -91.4,
+        "y": 0.3,
+        "z": -36.6
+      },
+      "distToTrack": 6.22,
+      "closestT": 0.454,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": -86.1,
+        "y": 3.8,
+        "z": 41.3
+      },
+      "distToTrack": 3.22,
+      "closestT": 0.371,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": -61.1,
+        "y": 1.4,
+        "z": 52.3
+      },
+      "distToTrack": 8.24,
+      "closestT": 0.348,
+      "halfW": 7.75,
+      "inAsphalt": false
+    },
+    {
+      "pos": {
+        "x": 88.9,
+        "y": -0.1,
+        "z": -165.9
+      },
+      "distToTrack": 5.47,
+      "closestT": 0.968,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": 92.2,
+        "y": -0.1,
+        "z": -189.7
+      },
+      "distToTrack": 1.69,
+      "closestT": 0.946,
+      "halfW": 7.75,
+      "inAsphalt": true
+    },
+    {
+      "pos": {
+        "x": 57.2,
+        "y": -0.1,
+        "z": -183.1
+      },
+      "distToTrack": 1.75,
+      "closestT": 0.893,
+      "halfW": 7.75,
+      "inAsphalt": true
+    }
+  ],
+  "wrongWayTriggers": [
+    {
+      "step": 33,
+      "t": 0.412,
+      "snappedT": 0.633,
+      "dot": -0.81,
+      "pos": {
+        "x": -107.7,
+        "y": 4.2,
+        "z": -0.1
+      },
+      "snappedPt": {
+        "x": -107.5,
+        "y": 5.3,
+        "z": -0.4
+      }
+    }
+  ],
+  "lapProgressCheck": []
+}
