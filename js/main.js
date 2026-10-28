@@ -3,7 +3,7 @@ import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=41';
 import { F1Car, clearGltfCache } from './car.js?v=33';
 import { PhysicsWorld } from './physics.js?v=63';
-import { Track } from './circuit.js?v=331';
+import { Track } from './circuit.js?v=332';
 import { TimingSystem } from './timing.js?v=352';
 import { SessionManager, SESSION_TYPES } from './session.js?v=351';
 import { AIGridManager, DIFFICULTY_MODES } from './ai.js?v=456';
