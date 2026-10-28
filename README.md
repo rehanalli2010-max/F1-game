@@ -7,7 +7,7 @@ High-performance 3D Formula 1 web racing game built with **Three.js**, **Cannon-
 ```bash
 # Local dev (Node static server, no deps)
 node server.js
-# then open http://localhost:8080
+# then open http://localhost:3000
 ```
 
 You can also simply **double-click `index.html`** — every dependency loads from CDN via the import map (Three.js, Cannon-es, PeerJS, Google Fonts). No `npm install` is required.
@@ -44,6 +44,10 @@ You can also simply **double-click `index.html`** — every dependency loads fro
 | `M` | Toggle Mute |
 | `H` | Toggle Help |
 | Touch Buttons | Mobile virtual controls |
+
+## Live Testing with GitHub Codespaces
+
+The repository includes a Codespaces dev container that starts the static game server on port 3000 and automatically opens the forwarded browser preview. To test a pull request, open the repository's branch selector, choose the pull request branch, then select **Code → Codespaces → Create codespace on this branch**. Once the Codespace starts, open the forwarded **F1 Game Preview** port to play the branch without merging it into `main`.
 
 ## Deployment
 
