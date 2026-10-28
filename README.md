@@ -17,8 +17,8 @@ You can also simply **double-click `index.html`** — every dependency loads fro
 ### Phase 1–4 (Core Game)
 - **Three.js** WebGL2 renderer with PCF soft shadows, ACES filmic tone mapping, and adaptive pixel ratio.
 - **Cannon-es** fixed-step physics (`world.step(1/60, dt, 3)`) with realistic F1 downforce, drag, gear-ratio transmission (8-speed + reverse), anti-roll, anti-reverse at start line.
-- **10 Grand Prix circuits** with distinct national palettes, themed props, and FIA-spec starting gantry.
-- **10-car starting grid** with three AI difficulty tiers (Easy / Medium / Hard).
+- **15 custom circuit layouts**: 10 redesigned routes plus 5 new original circuits. Every route has its own corner rhythm and elevation profile, with Easy / Medium / Hard ratings.
+- **10-car starting grid** with three AI difficulty tiers (Easy / Medium / Hard), tested against every circuit definition.
 - **Weekend sessions**: Free Practice and 20-Lap Race (10-Car Grid).
 - **PeerJS 6-character room code P2P multiplayer** with 30Hz state sync for Guest thin-client rendering.
 - **Pre-race / post-race broadcast mock ad hooks** (`SessionManager.showMockAd`).
@@ -78,7 +78,7 @@ js/ai.js           10-car AI grid with 3 difficulty tiers
 js/session.js      Practice / Race state machine
 js/timing.js       Lap timing, sectors, delta, session best
 js/network.js      PeerJS 6-char room code P2P
-js/tracks_db.js    10 Grand Prix configurations
+js/tracks_db.js    15 circuit configurations (10 redesigned + 5 original)
 js/teams_db.js     10 F1 constructor liveries
 js/textures.js     Procedural canvas textures (asphalt, carbon, livery)
 ```
