@@ -7,7 +7,7 @@ import { Track } from './circuit.js?v=331';
 import { TimingSystem } from './timing.js?v=352';
 import { SessionManager, SESSION_TYPES } from './session.js?v=351';
 import { AIGridManager, DIFFICULTY_MODES } from './ai.js?v=456';
-import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=302';
+import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=303';
 import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=401';
 import { F1_TEAMS, getTeamById } from './teams_db.js?v=101';
 import { EffectsManager } from './fx.js?v=51';
@@ -2045,6 +2045,10 @@ initTrackSelectorUI() {
       const safeLengthMeters = escapeHtml(String(track.lengthMeters));
       const safeDifficulty = escapeHtml(track.difficultyRating.toUpperCase());
       const safeSkyType = escapeHtml(track.theme.skyType);
+      const trackElevations = track.controlPoints.map(point => Number(point.y) || 0);
+      const elevationRange = Math.round(Math.max(...trackElevations) - Math.min(...trackElevations));
+      const safeElevationRange = escapeHtml(String(elevationRange));
+      const safeCornerCount = escapeHtml(String(track.controlPoints.length));
       const safeCharacteristics = escapeHtml(track.characteristics);
       const activeBadge = track.id === this.currentTrackId ? '<div class="track-card-active-badge">ACTIVE</div>' : '';
 
@@ -2066,6 +2070,8 @@ initTrackSelectorUI() {
           <span class="track-pill">${safeLengthMeters}M</span>
           <span class="track-pill ${diffClass}">${safeDifficulty}</span>
           <span class="track-pill">${safeSkyType}</span>
+          <span class="track-pill">${safeElevationRange}M ELEVATION</span>
+          <span class="track-pill">${safeCornerCount} CONTROL POINTS</span>
         </div>
 
         <div class="track-card-desc">${safeCharacteristics}</div>
