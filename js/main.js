@@ -3,11 +3,11 @@ import * as CANNON from 'cannon-es';
 import { AudioManager } from './audio.js?v=41';
 import { F1Car, clearGltfCache } from './car.js?v=33';
 import { PhysicsWorld } from './physics.js?v=63';
-import { Track } from './circuit.js?v=331';
+import { Track } from './circuit.js?v=332';
 import { TimingSystem } from './timing.js?v=352';
 import { SessionManager, SESSION_TYPES } from './session.js?v=351';
 import { AIGridManager, DIFFICULTY_MODES } from './ai.js?v=456';
-import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=302';
+import { TRACK_DATABASE, getTrackById } from './tracks_db.js?v=303';
 import { NetworkManager, NETWORK_PACKET_TYPES } from './network.js?v=401';
 import { F1_TEAMS, getTeamById } from './teams_db.js?v=101';
 import { EffectsManager } from './fx.js?v=51';
@@ -29,6 +29,30 @@ function escapeHtml(str) {
     '`': '&#96;',
     '/': '&#x2F;'
   }[tag] || tag));
+}
+
+// Counts meaningful direction changes in the top-down track layout, rather than
+// treating every spline control point as a separate corner.
+function countTrackTurns(trackData, thresholdDegrees = 12) {
+  const points = trackData?.controlPoints || [];
+  if (points.length < 3) return 0;
+  let turns = 0;
+  for (let i = 0; i < points.length; i++) {
+    const previous = points[(i - 1 + points.length) % points.length];
+    const current = points[i];
+    const next = points[(i + 1) % points.length];
+    const inX = current.x - previous.x;
+    const inZ = current.z - previous.z;
+    const outX = next.x - current.x;
+    const outZ = next.z - current.z;
+    const inLength = Math.hypot(inX, inZ);
+    const outLength = Math.hypot(outX, outZ);
+    if (inLength < 1e-5 || outLength < 1e-5) continue;
+    const dot = Math.max(-1, Math.min(1, (inX * outX + inZ * outZ) / (inLength * outLength)));
+    const deflection = Math.acos(dot) * 180 / Math.PI;
+    if (deflection >= thresholdDegrees) turns++;
+  }
+  return turns;
 }
 /**
  * Main Application Orchestrator for Phase 4 3D F1 Racing Game with P2P Multiplayer
@@ -2045,6 +2069,10 @@ initTrackSelectorUI() {
       const safeLengthMeters = escapeHtml(String(track.lengthMeters));
       const safeDifficulty = escapeHtml(track.difficultyRating.toUpperCase());
       const safeSkyType = escapeHtml(track.theme.skyType);
+      const trackElevations = track.controlPoints.map(point => Number(point.y) || 0);
+      const elevationRange = Math.round(Math.max(...trackElevations) - Math.min(...trackElevations));
+      const safeElevationRange = escapeHtml(String(elevationRange));
+      const safeCornerCount = escapeHtml(String(countTrackTurns(track)));
       const safeCharacteristics = escapeHtml(track.characteristics);
       const activeBadge = track.id === this.currentTrackId ? '<div class="track-card-active-badge">ACTIVE</div>' : '';
 
@@ -2066,6 +2094,8 @@ initTrackSelectorUI() {
           <span class="track-pill">${safeLengthMeters}M</span>
           <span class="track-pill ${diffClass}">${safeDifficulty}</span>
           <span class="track-pill">${safeSkyType}</span>
+          <span class="track-pill">${safeElevationRange}M ELEVATION</span>
+          <span class="track-pill">${safeCornerCount} TURNS</span>
         </div>
 
         <div class="track-card-desc">${safeCharacteristics}</div>

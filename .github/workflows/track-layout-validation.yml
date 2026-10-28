@@ -1,0 +1,37 @@
+name: Circuit layout validation
+
+on:
+  pull_request:
+    paths:
+      - "js/tracks_db.js"
+      - "js/main.js"
+      - "js/circuit.js"
+      - "css/style.css"
+      - "scripts/validate-tracks.mjs"
+      - ".github/workflows/track-layout-validation.yml"
+  push:
+    branches:
+      - main
+      - "feat/**"
+    paths:
+      - "js/tracks_db.js"
+      - "js/main.js"
+      - "js/circuit.js"
+      - "css/style.css"
+      - "scripts/validate-tracks.mjs"
+      - ".github/workflows/track-layout-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-circuits:
+    name: Validate all circuit layouts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate circuit geometry and route coverage
+        run: node scripts/validate-tracks.mjs

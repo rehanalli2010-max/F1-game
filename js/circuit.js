@@ -121,10 +121,7 @@ export class Track {
     // Build Barriers & Cannon-es Colliders
     this.buildTrackBarriers();
 
-    // Dedicated Crossover Bridge Architecture (Suzuka Figure-8 Overpass)
-    if (this.trackData.id === 'suzuka') {
-      this.buildSuzukaCrossoverBridge();
-    }
+    // The redesigned circuits are independent loops; no legacy real-circuit crossover is injected.
 
     // Build Pit Complex, Starting Gantry, 10 Grid Boxes
     this.buildPitComplex();

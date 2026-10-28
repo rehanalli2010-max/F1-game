@@ -7,7 +7,7 @@ High-performance 3D Formula 1 web racing game built with **Three.js**, **Cannon-
 ```bash
 # Local dev (Node static server, no deps)
 node server.js
-# then open http://localhost:8080
+# then open http://localhost:3000
 ```
 
 You can also simply **double-click `index.html`** — every dependency loads from CDN via the import map (Three.js, Cannon-es, PeerJS, Google Fonts). No `npm install` is required.
@@ -17,8 +17,8 @@ You can also simply **double-click `index.html`** — every dependency loads fro
 ### Phase 1–4 (Core Game)
 - **Three.js** WebGL2 renderer with PCF soft shadows, ACES filmic tone mapping, and adaptive pixel ratio.
 - **Cannon-es** fixed-step physics (`world.step(1/60, dt, 3)`) with realistic F1 downforce, drag, gear-ratio transmission (8-speed + reverse), anti-roll, anti-reverse at start line.
-- **10 Grand Prix circuits** with distinct national palettes, themed props, and FIA-spec starting gantry.
-- **10-car starting grid** with three AI difficulty tiers (Easy / Medium / Hard).
+- **15 custom circuit layouts**: 10 redesigned routes plus 5 new original circuits. Every route has its own corner rhythm and elevation profile, with Easy / Medium / Hard ratings.
+- **10-car starting grid** with three AI difficulty tiers (Easy / Medium / Hard), tested against every circuit definition.
 - **Weekend sessions**: Free Practice and 20-Lap Race (10-Car Grid).
 - **PeerJS 6-character room code P2P multiplayer** with 30Hz state sync for Guest thin-client rendering.
 - **Pre-race / post-race broadcast mock ad hooks** (`SessionManager.showMockAd`).
@@ -44,6 +44,10 @@ You can also simply **double-click `index.html`** — every dependency loads fro
 | `M` | Toggle Mute |
 | `H` | Toggle Help |
 | Touch Buttons | Mobile virtual controls |
+
+## Live Testing with GitHub Codespaces
+
+The repository includes a Codespaces dev container that starts the static game server on port 3000 and automatically opens the forwarded browser preview. To test a pull request, open the repository's branch selector, choose the pull request branch, then select **Code → Codespaces → Create codespace on this branch**. Once the Codespace starts, open the forwarded **F1 Game Preview** port to play the branch without merging it into `main`.
 
 ## Deployment
 
@@ -78,7 +82,7 @@ js/ai.js           10-car AI grid with 3 difficulty tiers
 js/session.js      Practice / Race state machine
 js/timing.js       Lap timing, sectors, delta, session best
 js/network.js      PeerJS 6-char room code P2P
-js/tracks_db.js    10 Grand Prix configurations
+js/tracks_db.js    15 circuit configurations (10 redesigned + 5 original)
 js/teams_db.js     10 F1 constructor liveries
 js/textures.js     Procedural canvas textures (asphalt, carbon, livery)
 ```

@@ -1,0 +1,12 @@
+{
+  "name": "F1 Grand Prix Live Preview",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "F1 Game Preview",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postStartCommand": "bash -lc 'nohup node server.js > /tmp/f1-game-server.log 2>&1 &'"
+}
