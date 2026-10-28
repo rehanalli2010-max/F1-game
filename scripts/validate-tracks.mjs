@@ -152,7 +152,7 @@ const report = tracks.map(inspectTrack);
 
 // The top-down selector needs to enumerate all circuits and surface the terrain + challenge stats.
 assert(main.includes("./tracks_db.js?v=303"), 'Track database cache version is stale in main.js');
-assert(main.includes('ELEVATION') && main.includes('CONTROL POINTS'), 'Track cards are missing layout stats');
+assert(main.includes('ELEVATION') && main.includes('TURNS'), 'Track cards are missing elevation/turn stats');
 assert(circuit.includes('this.trackData.controlPoints.map'), 'Circuit builder is not consuming per-map control points');
 assert(css.includes('.track-pill.diff-easy'), 'Easy difficulty badge styling missing');
 assert(css.includes('.track-pill.diff-medium'), 'Medium difficulty badge styling missing');
